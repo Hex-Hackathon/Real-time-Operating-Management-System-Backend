@@ -18,13 +18,12 @@ const jwt = require("jsonwebtoken");
 //MongoDB Connection
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 
-const client = new MongoClient(process.env.MONGO_URL, {
+const client = new MongoClient("mongodb://127.0.0.1:27017", {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
   },
- 
 });
 
 //Getting collection from Database
@@ -38,13 +37,17 @@ const Order_Product_Details = flavorflow_db.collection("Order_Product_Details");
 const truck = flavorflow_db.collection("truck");
 const deli_route = flavorflow_db.collection("deli_route");
 
+const raw_materials = flavorflow_db.collection("raw_materials");
+const receipe = flavorflow_db.collection("receipe");
+
+const required_materials = flavorflow_db.collection("required_materials");
+
 //JWT KEYS
 const secret_sales = process.env.SALES_JWT;
 const secret_logistics = process.env.LOGISTICS_JWT;
 const secret_warehouse = process.env.WAREHOUSE_JWT;
 const secret_admin = process.env.ADMIN_JWT;
 const secret_factory = process.env.FACTORY_JWT;
-
 
 // real-time
 
@@ -56,14 +59,11 @@ const { newOrderProcess } = require("./real_time");
 
 app.get("/", async function (req, res) {
   try {
-    return res
-      .status(200)
-      .json({ msg: "Welcome to FlavorWave API!!!" });
+    return res.status(200).json({ msg: "Welcome to FlavorWave API!!!" });
   } catch (e) {
     return res.status(500).json({ msg: e.message });
   }
 });
-
 
 const sales_auth = function (req, res, next) {
   const { authorization } = req.headers;
@@ -142,7 +142,7 @@ app.post("/orders", async function (req, res) {
   }
 });
 
-//Important route 
+//Important route
 app.post("/add_products_to_order", async function (req, res) {
   const { order_id, product_id, product_count } = req.body;
 
@@ -185,8 +185,6 @@ app.post("/add_products_to_order", async function (req, res) {
         }
       );
 
-
-
       if (result2) return res.status(201).json({ msg: "Data Updated" });
     }
   } catch (error) {
@@ -202,18 +200,18 @@ app.post("/order_process_confirm", async function (req, res) {
   }
 
   try {
-     const result= await orders.findOneAndUpdate(
-        { _id: new ObjectId(order_id) },
-        {
-          $set: {
-            delivery_status: "processing",
-          },
-        }
-      );
-      if (result) {
-        newOrderProcess();
-        return res.status(201).json({ msg: "Process Updated" });
+    const result = await orders.findOneAndUpdate(
+      { _id: new ObjectId(order_id) },
+      {
+        $set: {
+          delivery_status: "processing",
+        },
       }
+    );
+    if (result) {
+      newOrderProcess();
+      return res.status(201).json({ msg: "Process Updated" });
+    }
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
@@ -791,30 +789,6 @@ app.post("/warehouse-login", async function (req, res) {
   }
 });
 
-app.post("/create-product", async function (req, res) {
-  const { product_name, in_stock_count } = req.body;
-
-  if (!product_name || !in_stock_count) {
-    return res
-      .status(400)
-      .json({ msg: "required: name or email or password !!!" });
-  }
-
-  try {
-    const product_data = {
-      product_name,
-      in_stock_count: Number(in_stock_count),
-    };
-
-    const result = await products.insertOne(product_data);
-
-    if (result.insertedId) return res.status(201).json(result);
-    if (!result.insertedId) throw new Error("Something Wrong Try Again");
-  } catch (e) {
-    return res.status(500).json({ msg: e.message });
-  }
-});
-
 app.post("/product-increase", async function (req, res) {
   const { product_id, increase } = req.body;
 
@@ -1037,6 +1011,95 @@ app.post("/create-admin", async function (req, res) {
   } catch (error) {
     return res.status(201).json({ msg: error.message });
   }
+});
+
+app.post("/create-product", async function (req, res) {
+  const { product_name, in_stock_count } = req.body;
+
+  if (!product_name || !in_stock_count) {
+    return res
+      .status(400)
+      .json({ msg: "required: name or email or password !!!" });
+  }
+
+  try {
+    const product_data = {
+      product_name,
+      in_stock_count: Number(in_stock_count) || 0,
+    };
+
+    const result = await products.insertOne(product_data);
+
+    if (result.insertedId) return res.status(201).json(result);
+    if (!result.insertedId) throw new Error("Something Wrong Try Again");
+  } catch (e) {
+    return res.status(500).json({ msg: e.message });
+  }
+});
+
+app.post("/create-raw-materials", async function (req, res) {
+  const { raw_material_name, in_stock_count } = req.body;
+
+  if (!raw_material_name || !in_stock_count) {
+    return res
+      .status(400)
+      .json({ msg: "required: name or email or password !!!" });
+  }
+
+  try {
+    const raw_material_data = {
+      raw_material_name,
+      in_stock_count: Number(in_stock_count) || 0,
+    };
+
+    const result = await raw_materials.insertOne(raw_material_data);
+
+    if (result.insertedId) return res.status(201).json(result);
+    if (!result.insertedId) throw new Error("Something Wrong Try Again");
+  } catch (e) {
+    return res.status(500).json({ msg: e.message });
+  }
+});
+
+app.post("/create-receipe-of-product", async function (req, res) {
+  const { product_id } = req.body;
+
+  if (!product_id) {
+    return res.status(400).json({ msg: "required: something !!!" });
+  }
+
+  try {
+    let data = {
+      product_id: new ObjectId(product_id),
+      required_raw_materials: [],
+    };
+    const result = await receipe.insertOne(data);
+    if (result.insertedId) return res.status(201).json(result);
+    if (!result.insertedId) throw new Error("Something Wrong Try Again");
+  } catch (error) {}
+});
+
+app.post("/add-raw-material-to-receipe", async function (req, res) {
+  const { receipe_id, raw_material_id, require_raw } = req.body;
+
+  if (!receipe_id) {
+    return res.status(400).json({ msg: "required: something !!!" });
+  }
+
+  try {
+
+    let data = {
+      receipe_id: new ObjectId(receipe_id),
+      raw_material_id: new ObjectId(raw_material_id),
+      require_raw: Number(require_raw),
+    };
+   const result = await receipe.updateOne(
+     { _id: new ObjectId(receipe_id) },
+     { $push: { required_raw_materials: data } }
+   );
+    if (result) return res.status(201).json(result);
+    if (!result) throw new Error("Something Wrong Try Again");
+  } catch (error) {}
 });
 
 //--------------- --------------- ------- --------------- ---------------
