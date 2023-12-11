@@ -202,7 +202,7 @@ app.post("/order_process_confirm", async function (req, res) {
   }
 
   try {
-      await orders.findOneAndUpdate(
+     const result= await orders.findOneAndUpdate(
         { _id: new ObjectId(order_id) },
         {
           $set: {
@@ -210,7 +210,7 @@ app.post("/order_process_confirm", async function (req, res) {
           },
         }
       );
-      if (result2) {
+      if (result) {
         newOrderProcess();
         return res.status(201).json({ msg: "Process Updated" });
       }
