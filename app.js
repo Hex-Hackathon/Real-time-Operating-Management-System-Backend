@@ -1057,6 +1057,7 @@ app.post("/create-raw-materials", async function (req, res) {
     if (result.insertedId) return res.status(201).json(result);
     if (!result.insertedId) throw new Error("Something Wrong Try Again");
   } catch (e) {
+    console.log(e.message);
     return res.status(500).json({ msg: e.message });
   }
 });
@@ -1076,7 +1077,10 @@ app.post("/create-receipe-of-product", async function (req, res) {
     const result = await receipe.insertOne(data);
     if (result.insertedId) return res.status(201).json(result);
     if (!result.insertedId) throw new Error("Something Wrong Try Again");
-  } catch (error) {}
+  } catch (error) {
+    console.log(e.message);
+    return res.status(500).json({ msg: e.message });
+  }
 });
 
 app.post("/add-raw-material-to-receipe", async function (req, res) {
@@ -1099,7 +1103,10 @@ app.post("/add-raw-material-to-receipe", async function (req, res) {
    );
     if (result) return res.status(201).json(result);
     if (!result) throw new Error("Something Wrong Try Again");
-  } catch (error) {}
+  } catch (error) {
+    console.log(e.message);
+    return res.status(500).json({ msg: e.message });
+  }
 });
 
 //--------------- --------------- ------- --------------- ---------------
