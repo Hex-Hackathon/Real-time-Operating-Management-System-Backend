@@ -8,7 +8,7 @@ admin.initializeApp({
 
 const db = admin.database();
 
-module.exports = async function newOrderProcess() {
+async function newOrderProcess() {
   const ref = db.ref(
     "NewOrderEvent"
   );
@@ -16,3 +16,5 @@ module.exports = async function newOrderProcess() {
 
   return await newRef.set({ message: "hello world" });
 }
+
+module.exports = { newOrderProcess };
