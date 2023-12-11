@@ -205,8 +205,8 @@ app.post("/order_process_confirm", async function (req, res) {
       await orders.findOneAndUpdate(
         { _id: new ObjectId(order_id) },
         {
-          $addToSet: {
-            delivery_status:"processing"
+          $set: {
+            delivery_status: "processing",
           },
         }
       );
