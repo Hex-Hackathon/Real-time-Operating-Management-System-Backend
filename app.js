@@ -95,7 +95,7 @@ app.post("/sales-login", async function (req, res) {
     const user = await employee.findOne({ email });
     console.log(user);
 
-    if (user) {
+    if (user && user.department == "Sales") {
       const result = await bcrypt.compare(password, user.password);
 
       if (result) {
@@ -540,7 +540,7 @@ app.post("/logistics-login", async function (req, res) {
     const user = await employee.findOne({ email });
     console.log(user);
 
-    if (user) {
+    if (user && user.department == "Logistics") {
       const result = await bcrypt.compare(password, user.password);
 
       if (result) {
@@ -769,7 +769,7 @@ app.post("/warehouse-login", async function (req, res) {
     const user = await employee.findOne({ email });
     console.log(user);
 
-    if (user) {
+    if (user && user.department == "Warehouse") {
       const result = await bcrypt.compare(password, user.password);
 
       if (result) {
@@ -904,7 +904,7 @@ app.post("/admin-login", async function (req, res) {
     const user = await employee.findOne({ email });
     console.log(user);
 
-    if (user) {
+    if (user && user.department == "Adminstration") {
       const result = await bcrypt.compare(password, user.password);
 
       if (result) {
@@ -1142,7 +1142,7 @@ app.post("/factory-login", async function (req, res) {
     const user = await employee.findOne({ email });
     console.log(user);
 
-    if (user) {
+    if (user && user.department == "Factory") {
       const result = await bcrypt.compare(password, user.password);
 
       if (result) {
