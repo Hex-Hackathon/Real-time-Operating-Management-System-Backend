@@ -18,7 +18,7 @@ const jwt = require("jsonwebtoken");
 //MongoDB Connection
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 
-const client = new MongoClient(MONGO_URL, {
+const client = new MongoClient(process.env.MONGO_URL, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
