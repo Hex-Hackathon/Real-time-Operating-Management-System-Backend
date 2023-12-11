@@ -45,6 +45,11 @@ const secret_warehouse = process.env.WAREHOUSE_JWT;
 const secret_admin = process.env.ADMIN_JWT;
 const secret_factory = process.env.FACTORY_JWT;
 
+
+// real-time
+
+const { newOrderProcess } = require("./real_time");
+
 //--------------- --------------- ----- --------------- ---------------
 //--------------- --------------- SALES --------------- ---------------
 //--------------- --------------- ----- --------------- ---------------
@@ -137,6 +142,7 @@ app.post("/orders", async function (req, res) {
   }
 });
 
+//Important route 
 app.post("/add_products_to_order", async function (req, res) {
   const { order_id, product_id, product_count } = req.body;
 
@@ -179,8 +185,35 @@ app.post("/add_products_to_order", async function (req, res) {
         }
       );
 
+
+
       if (result2) return res.status(201).json({ msg: "Data Updated" });
     }
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+});
+
+app.post("/order_process_confirm", async function (req, res) {
+  const { order_id } = req.body;
+
+  if (!order_id) {
+    res.status(400).json({ msg: "required: something !!!" });
+  }
+
+  try {
+      await orders.findOneAndUpdate(
+        { _id: new ObjectId(order_id) },
+        {
+          $addToSet: {
+            delivery_status:"processing"
+          },
+        }
+      );
+      if (result2) {
+        newOrderProcess();
+        return res.status(201).json({ msg: "Process Updated" });
+      }
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
