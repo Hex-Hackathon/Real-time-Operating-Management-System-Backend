@@ -965,6 +965,37 @@ app.get("/employee-list/:start/:end", async function (req, res) {
   }
 });
 
+app.post("/create-admin", async function (req, res) {
+  const { name, email, phone, role, department, password } = req.body;
+
+  try {
+    //checking the data
+    if (!name || !email || !phone || !role || !department || !password) {
+      return res.status(400).json({ msg: "required: something !!!" });
+    }
+
+    //hashing the password
+    let hashed_password = await bcrypt.hash(password, 10);
+
+    const employee_data = {
+      name,
+      email,
+      role,
+      created_at: new Date(),
+      updated_at: new Date(),
+      department,
+      password: hashed_password,
+    };
+
+    const result = await employee.insertOne(employee_data);
+
+    if (result.insertedId) return res.status(201).json(result);
+    if (!result.insertedId) throw new Error("Something Wrong Try Again");
+  } catch (error) {
+    return res.status(201).json({ msg: error.message });
+  }
+});
+
 //--------------- --------------- ------- --------------- ---------------
 //--------------- --------------- Factory --------------- ---------------
 //--------------- --------------- ------- --------------- ---------------
