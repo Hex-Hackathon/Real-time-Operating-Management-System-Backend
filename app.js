@@ -49,6 +49,17 @@ const secret_factory = process.env.FACTORY_JWT;
 //--------------- --------------- SALES --------------- ---------------
 //--------------- --------------- ----- --------------- ---------------
 
+app.get("/", async function (req, res) {
+  try {
+    return res
+      .status(200)
+      .json({ msg: "Welcome to FlavorWave API!!!" });
+  } catch (e) {
+    return res.status(500).json({ msg: e.message });
+  }
+});
+
+
 const sales_auth = function (req, res, next) {
   const { authorization } = req.headers;
   const token = authorization && authorization.split(" ")[1];
