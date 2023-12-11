@@ -18,13 +18,16 @@ const jwt = require("jsonwebtoken");
 //MongoDB Connection
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 
-const client = new MongoClient(process.env.MONGO_URL || "mongodb://127.0.0.1:27017", {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
+const client = new MongoClient(
+  process.env.MONGO_URL || "mongodb://127.0.0.1:27017",
+  {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+  }
+);
 
 //Getting collection from Database
 const flavorflow_db = client.db("FlavorFlow");
@@ -1091,16 +1094,21 @@ app.post("/add-raw-material-to-receipe", async function (req, res) {
   }
 
   try {
-
     let data = {
       receipe_id: new ObjectId(receipe_id),
       raw_material_id: new ObjectId(raw_material_id),
       require_raw: Number(require_raw),
     };
-   const result = await receipe.updateOne(
-     { _id: new ObjectId(receipe_id) },
-     { $push: { required_raw_materials: data } }
-   );
+
+    const result = await required_materials.insertOne(data);
+
+    if(result){
+      await receipe.updateOne(
+        { _id: new ObjectId(receipe_id) },
+        { $addToSet: { required_raw_materials: new ObjectId(result.insertedId) } }
+      );
+    }
+
     if (result) return res.status(201).json(result);
     if (!result) throw new Error("Something Wrong Try Again");
   } catch (error) {
