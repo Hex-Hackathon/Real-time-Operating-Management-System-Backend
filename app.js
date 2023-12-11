@@ -207,6 +207,7 @@ app.post("/order_process_confirm", async function (req, res) {
       { _id: new ObjectId(order_id) },
       {
         $set: {
+          order_status: "processing",
           delivery_status: "processing",
         },
       }
