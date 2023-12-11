@@ -1,4 +1,4 @@
-require("dotenv").config("./.env");
+require("dotenv").config();
 //Express App Initialization
 const express = require("express");
 const app = express();
@@ -18,7 +18,7 @@ const jwt = require("jsonwebtoken");
 //MongoDB Connection
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 
-const client = new MongoClient("mongodb://127.0.0.1:27017", {
+const client = new MongoClient(MONGO_URL, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
