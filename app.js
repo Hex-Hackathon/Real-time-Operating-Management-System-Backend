@@ -667,7 +667,7 @@ app.get("/truck-lists", async function (req, res) {
   }
 });
 
-app.t("/incoming_pending_orders", async function (req, res) {
+app.get("/incoming_pending_orders", async function (req, res) {
   try {
     const result = await orders
       .aggregate([
