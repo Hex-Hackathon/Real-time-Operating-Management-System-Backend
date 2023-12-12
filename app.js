@@ -1193,6 +1193,51 @@ app.get("/orders-list-by_month", async function (req, res) {
   }
 });
 
+const VALID_TIME = {
+  day: true,
+  week: true,
+  month: true,
+  year: true,
+};
+const DATE_START_METHOD = {
+  day: getDayStart,
+  week: getWeekStart,
+  month: getMonthStart,
+  year: getYearStart,
+};
+
+// get the current day with 0 hour, 0 minutes, 0 seconds
+function getDayStart(date) {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+}
+
+// get the date for first day of the current week (which is sunday) with 0 hour, 0 minutes, 0 seconds
+function getWeekStart(date) {
+  const startDate = new Date(date);
+  startDate.setDate(date.getDate() - date.getDay());
+
+  return startDate;
+}
+
+// get the date for first day of the current month (which is 1) with 0 hour, 0 minutes, 0 seconds
+function getMonthStart(date) {
+  const january = new Date(date.getFullYear(), date.getMonth(), 1);
+  january.setHours(0, 0, 0, 0);
+  return january;
+}
+
+// get the date for first day of the first month of the current year with 0 hour, 0 minutes, 0 seconds
+function getYearStart(date) {
+  return new Date(date.getFullYear(), 0, 1, 0, 0, 0, 0);
+}
 const ANALYSIS_METHOD = {
   delivery_status: "delivery_status",
   order_status: "order_status",
