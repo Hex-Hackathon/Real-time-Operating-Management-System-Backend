@@ -263,8 +263,8 @@ app.get("/pending_orders_list", async function (req, res) {
   }
 });
 
-app.get("/orders_list_by_place_order_day", async function (req, res) {
-  const { date } = req.body;
+app.get("/orders_list_by_place_order_day/:date", async function (req, res) {
+  const { date } = req.params;
 
   if (!date) {
     res.status(400).json({ msg: "required: something !!!" });
@@ -316,8 +316,8 @@ app.get("/orders_list_by_place_order_day", async function (req, res) {
   }
 });
 
-app.get("/orders_list_by_deli_day", async function (req, res) {
-  const { date } = req.body;
+app.get("/orders_list_by_deli_day/:date", async function (req, res) {
+  const { date } = req.params;
 
   if (!date) {
     res.status(400).json({ msg: "required: something !!!" });
@@ -373,8 +373,8 @@ app.get("/orders_list_by_deli_day", async function (req, res) {
 
 // app.get("/orders_list_by_month", async function (req, res) {});
 
-app.get("/order_details", async function (req, res) {
-  const { order_id } = req.body;
+app.get("/order_details/:order_id", async function (req, res) {
+  const { order_id } = req.params;
 
   if (!order_id) {
     res.status(400).json({ msg: "required: something !!!" });
@@ -463,7 +463,7 @@ app.post("/create_customer", async function (req, res) {
 });
 
 app.get("/search_a_customer", async function (req, res) {
-  const { name, phone, deli_address, role } = req.body;
+  const { name, phone, deli_address, role } = req.query;
 
   if (!name && !phone && !deli_address && !role) {
     return res
@@ -505,7 +505,7 @@ app.get("/customer_lists", async function (req, res) {
 });
 
 app.get("/customer_lists_conditionals", async function (req, res) {
-  const { name, phone, deli_address, role } = req.body;
+  const { name, phone, deli_address, role } = req.query;
 
   if (!name && !phone && !deli_address && !role) {
     return res
