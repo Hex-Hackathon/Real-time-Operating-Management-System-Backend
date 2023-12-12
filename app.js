@@ -1268,8 +1268,8 @@ app.get("/order-analysis", async (req, res) => {
   const dateStartMethod = DATE_START_METHOD[analysisTime];
 
   const analysisDateQuery = {
-    $gte: dateStartMethod(currentDate).toISOString(),
-    $lte: currentDate.toISOString(),
+    $gte: dateStartMethod(currentDate),
+    $lte: currentDate,
   };
 
   const analysis = await orders
