@@ -1227,8 +1227,7 @@ app.get("/order-analysis", async (req, res) => {
     $lte: currentDate.toISOString(),
   };
 
-  const analysis = await myDb
-    .collection("orders")
+  const analysis = await orders
     .aggregate([
       {
         $match: {
