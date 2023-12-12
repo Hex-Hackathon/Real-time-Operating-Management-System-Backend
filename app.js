@@ -523,8 +523,6 @@ app.get("/search-customer", async function (req, res) {
   }
 });
 
-
-
 app.get("/customer_lists_conditionals", async function (req, res) {
   const { name, phone, deli_address, role } = req.query;
 
@@ -739,8 +737,7 @@ app.post("/create-deli-route", async function (req, res) {
       // Update the specific document using its ID
       await orders.updateMany(
         { _id: { $in: objectIds } },
-        { $set: { deli_id: result.insertedId } },
-        { $set: { delivery_status: "delivering" } }
+        { $set: { deli_id: result.insertedId, delivery_status: "delivering" } }
       );
     }
 
