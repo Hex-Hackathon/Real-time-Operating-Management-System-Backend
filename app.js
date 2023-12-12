@@ -1430,6 +1430,39 @@ app.post("/factory-login", async function (req, res) {
   }
 });
 
+app.get("/all", async function (req, res) {
+  const d1 = await customers.find({}).toArray();
+  const d2 = await employee.find({}).toArray();
+  const d3 = await orders.find({}).toArray();
+  const d10 = await Order_Product_Details.find({}).toArray();
+  const d4 = await deli_route.find({}).toArray();
+  const d5 = await products.find({}).toArray();
+  const d6 = await raw_materials.find({}).toArray();
+  const d7 = await receipe.find({}).toArray();
+  const d8 = await required_materials.find({}).toArray();
+  const d9 = await truck.find({}).toArray();
+
+  if ((d1, d2, d3, d4, d5, d6, d7, d8, d9)){
+    return res.status(201).json({
+      customers: d1,
+      employee: d2,
+      orders: d3,
+      Order_Product_Details: d10,
+      deli_route: d4,
+      products: d5,
+      raw_materials: d6,
+      receipe: d7,
+      required_materials: d8,
+      truck: d9,
+    });
+  }else{
+     return res
+       .status(400)
+       .json({ msg: "Somethibg Wrong!!!" });
+  }
+  
+});
+
 app.listen(8888, () => {
   console.log("API server running at http://localhost:8888");
 });
