@@ -739,7 +739,8 @@ app.post("/create-deli-route", async function (req, res) {
       // Update the specific document using its ID
       await orders.updateMany(
         { _id: { $in: objectIds } },
-        { $set: { deli_id: result.insertedId } }
+        { $set: { deli_id: result.insertedId } },
+        { $set: { delivery_status: "delivering" } }
       );
     }
 
