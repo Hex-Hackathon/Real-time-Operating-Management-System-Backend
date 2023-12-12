@@ -1143,12 +1143,12 @@ app.get("/orders-list-by_month", async function (req, res) {
     res.status(400).json({ msg: "required: something !!!" });
   }
   //Start of month
-  const startOfMonth = new Date(date_time);
+  const startOfMonth = new Date(date);
   startOfMonth.setDate(1);
   startOfMonth.setUTCHours(0, 0, 0, 0);
 
   // End of the month
-  const endOfMonth = new Date(date_time);
+  const endOfMonth = new Date(date);
   endOfMonth.setMonth(endOfMonth.getMonth() + 1); // Move to the next month
   endOfMonth.setDate(0); // Set to the last day of the current month
   endOfMonth.setUTCHours(23, 59, 59, 999);
