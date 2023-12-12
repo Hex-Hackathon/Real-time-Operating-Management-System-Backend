@@ -504,6 +504,27 @@ app.get("/customer_lists", async function (req, res) {
   }
 });
 
+app.get("/search-customer", async function (req, res) {
+  const { query } = req.query;
+  try {
+    const result = await customers
+      .find({
+        $or: [
+          { name: { $regex: new RegExp(query, "i") } }, // Case-insensitive search for name
+          { phone: { $regex: new RegExp(query, "i") } }, // Case-insensitive search for phone
+        ],
+      })
+      .toArray();
+
+    if (result) return res.status(200).json(result);
+    if (!result) return res.status(400).json({ msg: "No Such Customer" });
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+});
+
+
+
 app.get("/customer_lists_conditionals", async function (req, res) {
   const { name, phone, deli_address, role } = req.query;
 
@@ -646,7 +667,7 @@ app.get("/truck-lists", async function (req, res) {
   }
 });
 
-app.post("/incoming_pending_orders", async function (req, res) {
+app.t("/incoming_pending_orders", async function (req, res) {
   try {
     const result = await orders
       .aggregate([
