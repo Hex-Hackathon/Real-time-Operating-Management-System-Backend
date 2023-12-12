@@ -1103,10 +1103,14 @@ app.post("/add-raw-material-to-receipe", async function (req, res) {
 
     const result = await required_materials.insertOne(data);
 
-    if(result){
+    if (result) {
       await receipe.updateOne(
         { _id: new ObjectId(receipe_id) },
-        { $addToSet: { required_raw_materials: new ObjectId(result.insertedId) } }
+        {
+          $addToSet: {
+            required_raw_materials: new ObjectId(result.insertedId),
+          },
+        }
       );
     }
 
@@ -1116,6 +1120,142 @@ app.post("/add-raw-material-to-receipe", async function (req, res) {
     console.log(e.message);
     return res.status(500).json({ msg: e.message });
   }
+});
+
+app.get("/list-raw-materials", async function (req, res) {
+  try {
+    const result = await raw_materials
+      .find({})
+      .sort({ in_stock_count: 1 })
+      .toArray();
+    if (result) return res.status(200).json(result);
+    if (!result) throw new Error("Something Wrong Try Again");
+  } catch (error) {
+    console.log(e.message);
+    return res.status(500).json({ msg: e.message });
+  }
+});
+
+app.get("/orders-list-by_month", async function (req, res) {
+  const { date } = req.body;
+
+  if (!date) {
+    res.status(400).json({ msg: "required: something !!!" });
+  }
+  //Start of month
+  const startOfMonth = new Date(date_time);
+  startOfMonth.setDate(1);
+  startOfMonth.setUTCHours(0, 0, 0, 0);
+
+  // End of the month
+  const endOfMonth = new Date(date_time);
+  endOfMonth.setMonth(endOfMonth.getMonth() + 1); // Move to the next month
+  endOfMonth.setDate(0); // Set to the last day of the current month
+  endOfMonth.setUTCHours(23, 59, 59, 999);
+  try {
+    const result = await orders
+      .aggregate([
+        {
+          $match: {
+            created_date: { $gte: startOfMonth, $lt: endOfMonth },
+          },
+        },
+        {
+          $lookup: {
+            from: "customers",
+            localField: "customer_id",
+            foreignField: "_id",
+            as: "customer",
+          },
+        },
+        {
+          $unwind: "$customer",
+        },
+        {
+          $addFields: {
+            customer_name: "$customer.name",
+            delivery: "$customer.delivery_address",
+          },
+        },
+        {
+          $project: {
+            customer: 0,
+          },
+        },
+      ])
+      .toArray();
+
+    if (result == [])
+      return res.status(201).json({ msg: "No Data That Day of The Month" });
+    if (result) return res.status(201).json(result);
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+});
+
+const ANALYSIS_METHOD = {
+  delivery_status: "delivery_status",
+  order_status: "order_status",
+};
+
+app.get("/order-analysis", async (req, res) => {
+  const analysisTime = req.query?.analysisTime;
+  const analyzedBy = req.query?.analyzedBy;
+
+  if (
+    !analysisTime ||
+    typeof analysisTime !== "string" ||
+    !VALID_TIME[analysisTime]
+  ) {
+    return res.status(400).json({ message: "Invalid analysis time!" });
+  }
+
+  if (
+    !analyzedBy ||
+    typeof analyzedBy !== "string" ||
+    !ANALYSIS_METHOD[analyzedBy]
+  ) {
+    return res.status(400).json({ message: "Invalid analysis method!" });
+  }
+
+  const analysisMethod = ANALYSIS_METHOD[analyzedBy];
+  const currentDate = new Date();
+  const dateStartMethod = DATE_START_METHOD[analysisTime];
+
+  const analysisDateQuery = {
+    $gte: dateStartMethod(currentDate).toISOString(),
+    $lte: currentDate.toISOString(),
+  };
+
+  const analysis = await myDb
+    .collection("orders")
+    .aggregate([
+      {
+        $match: {
+          created_date: analysisDateQuery,
+        },
+      },
+      {
+        $group: {
+          _id: "$delivery_status",
+          count: { $sum: 1 },
+          created_date: {
+            $addToSet: "$created_date",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          [analysisMethod]: "$_id",
+          count: 1,
+          created_date: 1,
+        },
+      },
+    ])
+    .toArray();
+
+  res.json(analysis);
 });
 
 //--------------- --------------- ------- --------------- ---------------
@@ -1137,6 +1277,20 @@ const factory_auth = function (req, res, next) {
     return res.status(401).json({ msg: err.message });
   }
 };
+
+app.get("/raw-materials-list", async function (req, res) {
+  try {
+    const result = await raw_materials
+      .find({})
+      .sort({ in_stock_count: 1 })
+      .toArray();
+    if (result) return res.status(200).json(result);
+    if (!result) throw new Error("Something Wrong Try Again");
+  } catch (error) {
+    console.log(e.message);
+    return res.status(500).json({ msg: e.message });
+  }
+});
 
 app.post("/factory-login", async function (req, res) {
   const { email, password } = req.body;
