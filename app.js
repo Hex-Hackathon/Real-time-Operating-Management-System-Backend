@@ -38,7 +38,7 @@ const Order_Product_Details = flavorflow_db.collection("Order_Product_Details");
 
 const truck = flavorflow_db.collection("truck");
 const deli_route = flavorflow_db.collection("deli_route");
-
+const material_requests = flavorflow_db.collection("material_requests");
 const raw_materials = flavorflow_db.collection("raw_materials");
 const receipe = flavorflow_db.collection("receipe");
 
