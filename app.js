@@ -119,7 +119,7 @@ app.post("/sales-login", async function (req, res) {
 });
 
 app.post("/orders", async function (req, res) {
-  const { customer_phone, expected_date } = req.body;
+  const { customer_name, customer_phone, expected_date } = req.body;
 
   if (!customer_phone || !expected_date) {
     res.status(400).json({ msg: "required: something !!!" });
@@ -127,7 +127,10 @@ app.post("/orders", async function (req, res) {
 
   try {
 
-    const ifcustomer=await customers.findOne({phone:customer_phone});
+    const ifcustomer = await customers.findOne({
+      phone: customer_phone,
+      name: customer_name,
+    });
     if(ifcustomer){
       let data = {
         customer_id: new ObjectId(ifcustomer._id),
