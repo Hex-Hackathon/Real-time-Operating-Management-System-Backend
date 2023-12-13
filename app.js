@@ -263,7 +263,9 @@ app.get("/pending_orders_list", async function (req, res) {
             customer: 0,
           },
         },
+        { $sort: { created_date: -1 } },
       ])
+      .sort(-1)
       .toArray();
 
     if (result == []) return res.status(400).json({ msg: "No Data Something" });
