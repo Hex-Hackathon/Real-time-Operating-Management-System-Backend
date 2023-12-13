@@ -5,8 +5,7 @@ const app = express();
 
 //Adding CORS to Express App
 const cors = require("cors");
-app.use(cors("*"));
-
+app.use(cors({ origin: "*" }));
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -262,7 +261,7 @@ app.get("/pending_orders_list", async function (req, res) {
           },
         },
       ])
-    .sort({created_date:-1})
+      .sort({ created_date: -1 })
       .toArray();
 
     if (result == []) return res.status(400).json({ msg: "No Data Something" });
@@ -314,7 +313,6 @@ app.get("/processing_orders_list", async function (req, res) {
     return res.status(500).json({ msg: error.message });
   }
 });
-
 
 app.get("/orders_list_by_place_order_day/:date", async function (req, res) {
   const { date } = req.params;
@@ -761,41 +759,49 @@ app.get("/incoming_pending_orders", async function (req, res) {
 });
 
 app.post("/create-deli-route", async function (req, res) {
-  const { truck_id, deperature_date, completed_date, IdsOfOrders } = req.body;
+  const { truck_id_card, deperature_date, completed_date, IdsOfOrders } =
+    req.body;
 
-  if (!truck_id || !deperature_date || !completed_date || !IdsOfOrders) {
+  if (!truck_id_card || !deperature_date || !completed_date || !IdsOfOrders) {
     return res.status(400).json({ msg: "required: something !!!" });
   }
 
   try {
-    let data = {
-      truck_id,
-      deperature_date: new Date(deperature_date),
-      completed_date: new Date(completed_date),
-      IdsOfOrders: IdsOfOrders,
-      deli_status: "On Going",
-      created_date: new Date(),
-    };
+    const iftruck = await truck.findOne({ truck_id_card });
 
-    const result = await deli_route.insertOne(data);
+    if (iftruck) {
+      let data = {
+        truck_id: new ObjectId(iftruck._id),
+        deperature_date: new Date(deperature_date),
+        completed_date: new Date(completed_date),
+        IdsOfOrders: IdsOfOrders,
+        deli_status: "On Going",
+        created_date: new Date(),
+      };
 
-    if (result.insertedId) {
-      // const orderIds = IdsOfOrders.map((orderId) => ({
-      //   _id: orderId,
-      // }));
+      const result = await deli_route.insertOne(data);
 
-      // console.log(orderIds);
+      if (result.insertedId) {
+        // const orderIds = IdsOfOrders.map((orderId) => ({
+        //   _id: orderId,
+        // }));
 
-      const objectIds = IdsOfOrders.map((doc) => new ObjectId(doc));
-      // Update the specific document using its ID
-      await orders.updateMany(
-        { _id: { $in: objectIds } },
-        { $set: { deli_id: result.insertedId, delivery_status: "delivering" } }
-      );
+        // console.log(orderIds);
+
+        const objectIds = IdsOfOrders.map((doc) => new ObjectId(doc));
+        // Update the specific document using its ID
+        await orders.updateMany(
+          { _id: { $in: objectIds } },
+          {
+            $set: { deli_id: result.insertedId, delivery_status: "delivering" },
+          }
+        );
+      }
+
+      if (result) return res.status(201).json(result);
+      if (!result) throw new Error("Truck Create Fail");
     }
-
-    if (result) return res.status(201).json(result);
-    if (!result) throw new Error("Truck Create Fail");
+    if (!result) throw new Error("No Truck with such name");
   } catch (e) {
     return res.status(400).json({ msg: e.message });
   }
@@ -1250,6 +1256,11 @@ app.get("/list-raw-materials", async function (req, res) {
   }
 });
 
+app.get("/raw-materials", async (req, res) => {
+  const result = await raw_materials.find().toArray();
+  return res.json(result);
+});
+
 app.get("/orders-list-by_month", async function (req, res) {
   const { date } = req.query;
 
@@ -1535,6 +1546,147 @@ app.post("/factory-login", async function (req, res) {
       .json({ msg: "Incorrect name or email or password !!!" });
   } catch (e) {
     return res.status(500).json({ msg: e.message });
+  }
+});
+
+
+
+app.post("/requested-materials", async (req, res) => {
+  const material_name = req.body?.material_name;
+  const quantity = req.body?.quantity;
+  const budget = req.body?.budget;
+
+  if (!material_name || !quantity || !budget) {
+    return res.status(400).json({
+      message: "Material ID, budget and quantity are required!",
+    });
+  }
+
+  const foundMaterial = await raw_materials.findOne({
+    raw_material_name: material_name,
+  });
+  if (!foundMaterial) {
+    return res.status(400).json({ message: "No raw material found!" });
+  }
+
+  // valid status : 'pending' | 'approved'
+  const newRequest = await material_requests.insertOne({
+    material_id: foundMaterial._id,
+    quantity,
+    budget,
+    status: "pending",
+    created_date: new Date(),
+  });
+  return res.json(newRequest);
+});
+
+app.get("/requested-materials/:date", async (req, res) => {
+  const inputDateString = req.params?.date;
+  if (!inputDateString) {
+    return res.status(400).json({ message: "Date is required!" });
+  }
+
+  const currentDate = new Date();
+  const inputDate = new Date(inputDateString);
+
+  const startDayDate = new Date(inputDate.toISOString());
+  startDayDate.setHours(0, 0, 0, 0);
+
+  const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
+  const sameMonth = inputDate.getMonth() === currentDate.getMonth();
+  const sameDay = inputDate.getDate() === currentDate.getDate();
+
+  if (!sameYear || !sameMonth || !sameDay) {
+    inputDate.setHours(23, 59, 59, 999);
+  } else {
+    inputDate.setHours(
+      currentDate.getHours(),
+      currentDate.getMinutes(),
+      currentDate.getSeconds(),
+      currentDate.getMilliseconds()
+    );
+  }
+
+  const data = await material_requests
+    .aggregate([
+      {
+        $match: {
+          created_date: {
+            $gte: startDayDate,
+            $lte: inputDate,
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "raw_materials",
+          localField: "material_id",
+          foreignField: "_id",
+          as: "material",
+        },
+      },
+      {
+        $unwind: {
+          path: "$material",
+          includeArrayIndex: "material_index",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          material_index: 0,
+          material_id: 0,
+          "material.in_stock_count": 0,
+        },
+      },
+    ])
+    .toArray();
+
+  return res.json(data);
+});
+
+app.patch("/approve-material-requests", async (req, res) => {
+  try {
+    const request_ids = req.body?.request_ids;
+
+    if (!request_ids || !request_ids.length) {
+      return res.status(400).json({ message: "Request id list is required!" });
+    }
+
+    const requestObjectIds = request_ids.map((idString) => {
+      if (!ObjectId.isValid(idString)) {
+        throw new Error("Invalid request ID!");
+      }
+      return new ObjectId(idString);
+    });
+
+    const foundRequests = await material_requests
+      .find({
+        _id: {
+          $in: requestObjectIds,
+        },
+      })
+      .toArray();
+    if (!foundRequests) {
+      return res.status(400).json({ message: "No requests found!" });
+    }
+
+    const result = await material_requests.updateMany(
+      {
+        _id: {
+          $in: foundRequests.map((request) => request._id),
+        },
+      },
+      {
+        $set: {
+          status: "approved",
+        },
+      }
+    );
+
+    return res.json(result);
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
   }
 });
 
