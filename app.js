@@ -255,7 +255,7 @@ app.get("/pending_orders_list", async function (req, res) {
         {
           $addFields: {
             customer_name: "$customer.name",
-            delivery: "$customer.delivery_address",
+            delivery: "$customer.deli_address",
           },
         },
         {
