@@ -1363,6 +1363,61 @@ app.get("/order-analysis", async (req, res) => {
   res.json(analysis);
 });
 
+app.get("/admin-overall-data", async (req, res) => {
+  const date = req.query?.date;
+  if (!date) {
+    return res.status(400).json({ message: "Date is required!" });
+  }
+  const currentDate = new Date();
+  const inputDate = new Date(date);
+
+  const startMonthDate = new Date(
+    inputDate.getFullYear(),
+    inputDate.getMonth()
+  );
+  startMonthDate.setDate(1);
+  startMonthDate.setHours(0, 0, 0, 0);
+
+  const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
+  const sameMonth = inputDate.getMonth() === currentDate.getMonth();
+  const sameDay = inputDate.getDate() === currentDate.getDate();
+
+  if (!sameYear || !sameMonth || !sameDay) {
+    inputDate.setMonth(inputDate.getMonth() + 1, 0);
+    inputDate.setHours(23, 59, 59, 999);
+  }
+
+  //* use for debugging
+  // console.log({ startMonthDate, inputDate });
+
+  const totalOrders = await orders.countDocuments({
+    created_date: {
+      $gte: startMonthDate,
+      $lte: inputDate,
+    },
+  });
+
+  const totalDeliveringTrucks = await deli_route.countDocuments({
+    created_date: {
+      $gte: startMonthDate,
+      $lte: inputDate,
+    },
+  });
+
+  const totalCustomers = await customers.countDocuments({
+    created_date: {
+      $gte: startMonthDate,
+      $lte: inputDate,
+    },
+  });
+
+  res.json([
+    { name: "orders", count: totalOrders },
+    { name: "deliveringTrucks", count: totalDeliveringTrucks },
+    { name: "customers", count: totalCustomers },
+  ]);
+});
+
 //--------------- --------------- ------- --------------- ---------------
 //--------------- --------------- Factory --------------- ---------------
 //--------------- --------------- ------- --------------- ---------------
@@ -1442,7 +1497,7 @@ app.get("/all", async function (req, res) {
   const d8 = await required_materials.find({}).toArray();
   const d9 = await truck.find({}).toArray();
 
-  if ((d1, d2, d3, d4, d5, d6, d7, d8, d9)){
+  if ((d1, d2, d3, d4, d5, d6, d7, d8, d9)) {
     return res.status(201).json({
       customers: d1,
       employee: d2,
@@ -1455,12 +1510,9 @@ app.get("/all", async function (req, res) {
       required_materials: d8,
       truck: d9,
     });
-  }else{
-     return res
-       .status(400)
-       .json({ msg: "Somethibg Wrong!!!" });
+  } else {
+    return res.status(400).json({ msg: "Somethibg Wrong!!!" });
   }
-  
 });
 
 app.listen(8888, () => {
