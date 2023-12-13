@@ -238,7 +238,7 @@ app.get("/pending_orders_list", async function (req, res) {
         {
           $match: {
             order_status: "pending",
-            deli_status: "pending",
+            delivery_status: "pending",
           },
         },
         {
