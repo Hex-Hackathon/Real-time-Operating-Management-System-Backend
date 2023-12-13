@@ -178,6 +178,54 @@ app.patch("/approve-material-requests", async (req, res) => {
 	}
 });
 
+app.post("/add-stock", async (req, res) => {
+	const product_name = req.body?.product_name;
+	const quantity = req.body?.quantity;
+
+	if (
+		!product_name ||
+		typeof product_name !== "string" ||
+		!quantity ||
+		typeof quantity !== "number"
+	) {
+		return res
+			.status(400)
+			.json({ message: "Product Name and Quantity are required!" });
+	}
+
+	const foundProduct = await products.findOne({ product_name });
+	if (!!foundProduct) {
+		return res.status(400).json({ message: "Product already exists!" });
+	}
+
+	const result = await products.insertOne({
+		product_name,
+		in_stock_count: quantity,
+	});
+	if (!result) {
+		return res.status(500).json({ message: "Something went wrong!" });
+	}
+	return res.json(result);
+});
+
+app.delete("/remove-stock/:id", async (req, res) => {
+	const productId = req.params?.id;
+	if (!productId) {
+		return res.status(400).json({ message: "Product ID is required!" });
+	}
+	if (!ObjectId.isValid(productId)) {
+		return res.status(400).json({ message: "Invalid product ID!" });
+	}
+
+	const result = await products.findOneAndDelete({
+		_id: new ObjectId(productId),
+	});
+	if(!result) {
+		return res.status(400).json({message: 'Product not found!'})
+	}
+	return res.json({message: 'Product deleted successfully!'});
+});
+
 app.listen(3500, () => {
 	console.log("server started!");
 });
