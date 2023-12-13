@@ -126,12 +126,11 @@ app.post("/orders", async function (req, res) {
   }
 
   try {
-
     const ifcustomer = await customers.findOne({
       phone: customer_phone,
       name: customer_name,
     });
-    if(ifcustomer){
+    if (ifcustomer) {
       let data = {
         customer_id: new ObjectId(ifcustomer._id),
         product_list: [],
@@ -146,10 +145,9 @@ app.post("/orders", async function (req, res) {
       const result = await orders.insertOne(data);
 
       if (result.insertedId) return res.status(201).json(result);
-    }else{
+    } else {
       return res.status(500).json({ msg: "No Customer Create Customer First" });
     }
-    
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
@@ -263,7 +261,6 @@ app.get("/pending_orders_list", async function (req, res) {
             customer: 0,
           },
         },
-        { $sort: { created_date: -1 } },
       ])
       .sort(-1)
       .toArray();
