@@ -5,7 +5,7 @@ const app = express();
 
 //Adding CORS to Express App
 const cors = require("cors");
-app.use(cors());
+app.use(cors("*"));
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -773,8 +773,8 @@ app.get("/deli-routes", async function (req, res) {
   }
 });
 
-app.get("/deli-route-details", async function (req, res) {
-  const { route_id } = req.body;
+app.get("/deli-route-details/:route_id", async function (req, res) {
+  const { route_id } = req.params;
 
   if (!route_id) {
     return res.status(400).json({ msg: "required: something !!!" });
@@ -1208,7 +1208,7 @@ app.get("/list-raw-materials", async function (req, res) {
 });
 
 app.get("/orders-list-by_month", async function (req, res) {
-  const { date } = req.body;
+  const { date } = req.query;
 
   if (!date) {
     res.status(400).json({ msg: "required: something !!!" });
