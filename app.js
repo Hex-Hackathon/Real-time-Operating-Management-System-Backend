@@ -119,27 +119,34 @@ app.post("/sales-login", async function (req, res) {
 });
 
 app.post("/orders", async function (req, res) {
-  const { customer_id, expected_date } = req.body;
+  const { customer_phone, expected_date } = req.body;
 
-  if (!customer_id || !expected_date) {
+  if (!customer_phone || !expected_date) {
     res.status(400).json({ msg: "required: something !!!" });
   }
 
   try {
-    let data = {
-      customer_id: new ObjectId(customer_id),
-      product_list: [],
-      order_status: "pending",
-      delivery_status: "pending",
-      paid: "no",
-      created_date: new Date(),
-      expected_date: new Date(expected_date),
-      deli_id: "",
-    };
 
-    const result = await orders.insertOne(data);
+    const ifcustomer=await customers.findOne({phone:customer_phone});
+    if(ifcustomer){
+      let data = {
+        customer_id: new ObjectId(ifcustomer._id),
+        product_list: [],
+        order_status: "pending",
+        delivery_status: "pending",
+        paid: "no",
+        created_date: new Date(),
+        expected_date: new Date(expected_date),
+        deli_id: "",
+      };
 
-    if (result.insertedId) return res.status(201).json(result);
+      const result = await orders.insertOne(data);
+
+      if (result.insertedId) return res.status(201).json(result);
+    }else{
+      return res.status(500).json({ msg: "No Customer Create Customer First" });
+    }
+    
   } catch (error) {
     return res.status(500).json({ msg: error.message });
   }
