@@ -272,6 +272,50 @@ app.get("/pending_orders_list", async function (req, res) {
   }
 });
 
+app.get("/processing_orders_list", async function (req, res) {
+  try {
+    const result = await orders
+      .aggregate([
+        {
+          $match: {
+            order_status: "processing",
+            delivery_status: "processing",
+          },
+        },
+        {
+          $lookup: {
+            from: "customers",
+            localField: "customer_id",
+            foreignField: "_id",
+            as: "customer",
+          },
+        },
+        {
+          $unwind: "$customer",
+        },
+        {
+          $addFields: {
+            customer_name: "$customer.name",
+            delivery: "$customer.deli_address",
+          },
+        },
+        {
+          $project: {
+            customer: 0,
+          },
+        },
+      ])
+      .sort({ created_date: -1 })
+      .toArray();
+
+    if (result == []) return res.status(400).json({ msg: "No Data Something" });
+    if (result) return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+});
+
+
 app.get("/orders_list_by_place_order_day/:date", async function (req, res) {
   const { date } = req.params;
 
