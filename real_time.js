@@ -12,9 +12,9 @@ async function newOrderProcess() {
   const ref = db.ref(
     "NewOrderEvent"
   );
-  return await ref.set(new Date());
+  const newRef = ref.push();
 
- // return await newRef.set({ message: "hello world" });
+  return await newRef.set({ message: "hello world" });
 }
 
 module.exports = { newOrderProcess };
