@@ -129,6 +129,7 @@ app.post("/orders", async function (req, res) {
       phone: customer_phone,
       name: customer_name,
     });
+    console.log(ifcustomer);
     if (ifcustomer) {
       let data = {
         customer_id: new ObjectId(ifcustomer._id),
