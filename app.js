@@ -1142,9 +1142,9 @@ app.post("/request-stock", async (req, res) => {
       .status(400)
       .json({ message: "Product ID and Quantity are required!" });
   }
-  if (!ObjectId.isValid(product_id)) {
-    return res.status(400).json({ message: "Invalid product ID!" });
-  }
+  // if (!ObjectId.isValid(product_id)) {
+  //   return res.status(400).json({ message: "Invalid product ID!" });
+  // }
 
   // create new product if doesn't exist
   const foundProduct = await products.findOne({
