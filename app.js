@@ -880,7 +880,7 @@ app.post("/create-deli-route", async function (req, res) {
 app.get("/deli-routes", async function (req, res) {
   try {
     const result = await deli_route
-      .find({ deli_status: "On Going" })
+      .find({ })
       .sort({
         deperature_date: -1,
       })
