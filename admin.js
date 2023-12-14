@@ -29,6 +29,7 @@ const raw_materials = flavorflow_db.collection("raw_materials");
 const receipe = flavorflow_db.collection("receipe");
 
 const required_materials = flavorflow_db.collection("required_materials");
+const stock_requests = flavorflow_db.collection("stock_requests");
 
 app.get("/admin-overall-data", async (req, res) => {
 	const date = req.query?.date;
@@ -172,106 +173,130 @@ app.get("/order-analysis", async (req, res) => {
 		])
 		.toArray();
 
-	const result = analysis.sort((a, b) => {
-		return a?.item?.localeCompare(b);
-	});
+	const result = !analysis?.length
+		? []
+		: analysis.sort((a, b) => {
+				return a.order_status.localeCompare(b);
+		  });
 
 	res.json(result);
 });
 
-app.get("/delivery-analysis", async (req, res) => {
-	const period = req.query?.period;
-	if (
-		!period ||
-		(period !== "daily" &&
-			period !== "weekly" &&
-			period !== "monthly" &&
-			period !== "yearly")
-	) {
-		return res.status(400).json({ message: "Period is required!" });
-	}
+// app.get("/product-request-analysis", async (req, res) => {
+// 	const period = req.query?.period;
+// 	if (
+// 		!period ||
+// 		(period !== "daily" &&
+// 			period !== "weekly" &&
+// 			period !== "monthly" &&
+// 			period !== "yearly")
+// 	) {
+// 		return res.status(400).json({ message: "Period is required!" });
+// 	}
 
-	let dateFilter = {};
-	if (period === "yearly") {
-		dateFilter = {
-			$gte: new Date(new Date().getFullYear(), 0, 1, 0, 0, 0, 0),
-			$lt: new Date(new Date().getFullYear() + 1, 0, 1),
-		};
-	} else if (period === "monthly") {
-		dateFilter = {
-			$gte: new Date(
-				new Date().getFullYear(),
-				new Date().getMonth(),
-				1,
-				0,
-				0,
-				0,
-				0
-			),
-			$lt: new Date(
-				new Date().getFullYear(),
-				new Date().getMonth() + 1,
-				1
-			),
-		};
-	} else if (period === "weekly") {
-		const currentDate = new Date();
-		const firstDayOfWeek = new Date(
-			currentDate.setDate(currentDate.getDate() - currentDate.getDay())
-		);
-		firstDayOfWeek.setHours(0, 0, 0, 0);
+// 	let dateFilter = {};
+// 	if (period === "yearly") {
+// 		dateFilter = {
+// 			$gte: new Date(new Date().getFullYear(), 0, 1, 0, 0, 0, 0),
+// 			$lt: new Date(new Date().getFullYear() + 1, 0, 1),
+// 		};
+// 	} else if (period === "monthly") {
+// 		dateFilter = {
+// 			$gte: new Date(
+// 				new Date().getFullYear(),
+// 				new Date().getMonth(),
+// 				1,
+// 				0,
+// 				0,
+// 				0,
+// 				0
+// 			),
+// 			$lt: new Date(
+// 				new Date().getFullYear(),
+// 				new Date().getMonth() + 1,
+// 				1
+// 			),
+// 		};
+// 	} else if (period === "weekly") {
+// 		const currentDate = new Date();
+// 		const firstDayOfWeek = new Date(
+// 			currentDate.setDate(currentDate.getDate() - currentDate.getDay())
+// 		);
+// 		firstDayOfWeek.setHours(0, 0, 0, 0);
 
-		const lastDayOfWeek = new Date(
-			firstDayOfWeek.getFullYear(),
-			firstDayOfWeek.getMonth(),
-			firstDayOfWeek.getDate() + 7
-		);
-		console.log({ firstDayOfWeek, lastDayOfWeek });
+// 		const lastDayOfWeek = new Date(
+// 			firstDayOfWeek.getFullYear(),
+// 			firstDayOfWeek.getMonth(),
+// 			firstDayOfWeek.getDate() + 7
+// 		);
+// 		console.log({ firstDayOfWeek, lastDayOfWeek });
 
-		dateFilter = {
-			$gte: firstDayOfWeek,
-			$lt: lastDayOfWeek,
-		};
-	} else if (period === "daily") {
-		dateFilter = {
-			$gte: new Date(new Date().setHours(0, 0, 0, 0)),
-			$lt: new Date(new Date().setHours(23, 59, 59, 999)),
-		};
-	}
+// 		dateFilter = {
+// 			$gte: firstDayOfWeek,
+// 			$lt: lastDayOfWeek,
+// 		};
+// 	} else if (period === "daily") {
+// 		dateFilter = {
+// 			$gte: new Date(new Date().setHours(0, 0, 0, 0)),
+// 			$lt: new Date(new Date().setHours(23, 59, 59, 999)),
+// 		};
+// 	}
 
-	const analysis = await orders
-		.aggregate([
-			{
-				$match: {
-					created_date: dateFilter,
-				},
-			},
-			{
-				$group: {
-					_id: "$delivery_status",
-					count: { $sum: 1 },
-					created_date: {
-						$addToSet: "$created_date",
-					},
-				},
-			},
-			{
-				$project: {
-					_id: 0,
-					delivery_status: "$_id",
-					count: 1,
-					created_date: 1,
-				},
-			},
-		])
-		.toArray();
+// 	const analysis = await stock_requests
+// 		.aggregate([
+// 			{
+// 				$match: {
+// 					created_date: dateFilter,
+// 				},
+// 			},
+// 			{
+// 				$group: {
+// 					_id: "$product_id",
+// 					count: {
+// 						$sum: 1,
+// 					},
+// 					created_date: {
+// 						$addToSet: "$created_date",
+// 					},
+// 				},
+// 			},
+// 			{
+// 				$project: {
+// 					_id: 0,
+// 					product_id: "$_id",
+// 					count: 1,
+// 					created_date: 1,
+// 				},
+// 			},
+// 			{
+// 				$lookup: {
+// 					from: "products",
+// 					localField: "product_id",
+// 					foreignField: "_id",
+// 					as: "product",
+// 				},
+// 			},
+// 			{
+// 				$unwind: {
+// 					path: "$product",
+// 					includeArrayIndex: "index",
+// 					preserveNullAndEmptyArrays: true,
+// 				},
+// 			},
+// 			{
+// 				$project: {
+// 					index: 0,
+// 				},
+// 			},
+// 		])
+// 		.toArray();
 
-	const result = analysis.sort((a, b) => {
-		return b?.item?.localeCompare(a);
-	});
+// 	const result = analysis.sort((a, b) => {
+// 		return b?.item?.localeCompare(a);
+// 	});
 
-	res.json(result);
-});
+// 	res.json(result);
+// });
 
 app.listen(3501, () => {
 	console.log("server started!");

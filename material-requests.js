@@ -45,7 +45,7 @@ app.post("/requested-materials", async (req, res) => {
 
 	if (!material_name || !quantity || !budget) {
 		return res.status(400).json({
-			message: "Material ID, budget and quantity are required!",
+			message: "Material name, budget and quantity are required!",
 		});
 	}
 
@@ -329,6 +329,72 @@ app.post("/request-stock", async (req, res) => {
 		return res.status(500).json({ message: "Something went wrong!" });
 	}
 	return res.json(data);
+});
+
+app.patch("/approve-stock-request", async (req, res) => {
+	try {
+		const request_ids = req.body.request_ids;
+
+		if (!request_ids || !request_ids.length) {
+			return res
+				.status(400)
+				.json({ message: "Request id list is required!" });
+		}
+
+		const requestObjectIds = request_ids.map((idString) => {
+			if (!ObjectId.isValid(idString)) {
+				throw new Error("Invalid request ID!");
+			}
+			return new ObjectId(idString);
+		});
+
+		const foundRequests = await stock_requests
+			.find({
+				_id: {
+					$in: requestObjectIds,
+				},
+			})
+			.toArray();
+		if (!foundRequests) {
+			return res.status(400).json({ message: "No requests found!" });
+		}
+
+		const result = await stock_requests.updateMany(
+			{
+				_id: {
+					$in: foundRequests.map((request) => request._id),
+				},
+			},
+			{
+				$set: {
+					admin_status: "approved",
+				},
+			}
+		);
+		console.log({ result });
+		return res.json({ message: "Approved!" });
+	} catch (err) {
+		return res.status(400).json({ message: err.message });
+	}
+});
+
+app.patch("/provide-stock-request/:id", async (req, res) => {
+	const requestId = req.params?.id;
+	if (!requestId) {
+		return res.status(400).json({ message: "Request ID is required!" });
+	}
+	if (!ObjectId.isValid(requestId)) {
+		return res.status(400).json({ message: "Invalid request ID!" });
+	}
+
+	const result = await stock_requests.findOneAndUpdate(
+		{ _id: new ObjectId(requestId) },
+		{ $set: { status: "processed" } }
+	);
+	if (!result) {
+		return res.status(400).json({ message: "Request not found!" });
+	}
+	return res.json({ mesage: "Approved!" });
 });
 
 app.listen(3500, () => {
