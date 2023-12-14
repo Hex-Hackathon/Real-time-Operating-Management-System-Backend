@@ -120,7 +120,7 @@ app.post("/sales-login", async function (req, res) {
 app.post("/orders", async function (req, res) {
   const { customer_name, customer_phone, expected_date } = req.body;
 
-  if (!customer_phone || !expected_date) {
+  if (!customer_name || !customer_phone || !expected_date) {
     res.status(400).json({ msg: "required: something !!!" });
   }
 
@@ -145,7 +145,7 @@ app.post("/orders", async function (req, res) {
 
       if (result.insertedId) return res.status(201).json(result);
     } else {
-      return res.status(500).json({ msg: "No Customer Create Customer First" });
+      return res.status(400).json({ msg: "No Customer Create Customer First" });
     }
   } catch (error) {
     return res.status(500).json({ msg: error.message });
