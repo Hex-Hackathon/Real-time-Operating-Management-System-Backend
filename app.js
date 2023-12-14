@@ -1902,10 +1902,14 @@ app.patch("/approve-stock-request", async (req, res) => {
     //   return new ObjectId(idString);
     // });
 
+    const requestObjectIds = request_ids.map((idString) => {
+			return new ObjectId(idString);
+		});
+
     const foundRequests = await stock_requests
       .find({
         _id: {
-          $in: request_ids,
+          $in: requestObjectIds,
         },
         admin_status: {
           $ne: "approved",
@@ -2134,11 +2138,14 @@ app.patch("/approve-material-requests", async (req, res) => {
     //   }
     //   return new ObjectId(idString);
     // });
+    const requestObjectIds = request_ids.map((idString) => {
+			return new ObjectId(idString);
+		});
 
     const foundRequests = await material_requests
       .find({
         _id: {
-          $in: request_ids,
+          $in: requestObjectIds,
         },
       })
       .toArray();
