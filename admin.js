@@ -85,6 +85,101 @@ app.get("/admin-overall-data", async (req, res) => {
 	]);
 });
 
+app.get("/order-analysis", async (req, res) => {
+	const period = req.query?.period;
+	if (
+		!period ||
+		(period !== "daily" &&
+			period !== "weekly" &&
+			period !== "monthly" &&
+			period !== "yearly")
+	) {
+		return res.status(400).json({ message: "Period is required!" });
+	}
+
+	let dateFilter = {};
+	if (period === "yearly") {
+		dateFilter = {
+			$gte: new Date(new Date().getFullYear(), 0, 1, 0, 0, 0, 0),
+			$lt: new Date(new Date().getFullYear() + 1, 0, 1),
+		};
+	} else if (period === "monthly") {
+		dateFilter = {
+			$gte: new Date(
+				new Date().getFullYear(),
+				new Date().getMonth(),
+				1,
+				0,
+				0,
+				0,
+				0
+			),
+			$lt: new Date(
+				new Date().getFullYear(),
+				new Date().getMonth() + 1,
+				1
+			),
+		};
+	} else if (period === "weekly") {
+		const currentDate = new Date();
+		const firstDayOfWeek = new Date(
+			currentDate.setDate(currentDate.getDate() - currentDate.getDay())
+		);
+		firstDayOfWeek.setHours(0, 0, 0, 0);
+
+		const lastDayOfWeek = new Date(
+			firstDayOfWeek.getFullYear(),
+			firstDayOfWeek.getMonth(),
+			firstDayOfWeek.getDate() + 7
+		);
+		console.log({ firstDayOfWeek, lastDayOfWeek });
+
+		dateFilter = {
+			$gte: firstDayOfWeek,
+			$lt: lastDayOfWeek,
+		};
+	} else if (period === "daily") {
+		dateFilter = {
+			$gte: new Date(new Date().setHours(0, 0, 0, 0)),
+			$lt: new Date(new Date().setHours(23, 59, 59, 999)),
+		};
+	}
+
+	const analysis = await orders
+		.aggregate([
+			{
+				$match: {
+					created_date: dateFilter,
+				},
+			},
+			{
+				$group: {
+					_id: "$order_status",
+					count: { $sum: 1 },
+					created_date: {
+						$addToSet: "$created_date",
+					},
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					order_status: "$_id",
+					count: 1,
+					created_date: 1,
+				},
+			},
+		])
+		.toArray();
+
+	const result = analysis.sort((a, b) => {
+		return b?.item?.localeCompare(a);
+	});
+	console.log(result);
+
+	res.json(analysis);
+});
+
 app.listen(3501, () => {
 	console.log("server started!");
 });

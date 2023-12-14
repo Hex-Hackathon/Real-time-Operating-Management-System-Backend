@@ -31,6 +31,7 @@ const receipe = flavorflow_db.collection("receipe");
 
 const required_materials = flavorflow_db.collection("required_materials");
 const material_requests = flavorflow_db.collection("material_requests");
+const stock_requests = flavorflow_db.collection("stock_requests");
 
 app.get("/raw-materials", async (req, res) => {
 	const result = await raw_materials.find().toArray();
@@ -220,10 +221,78 @@ app.delete("/remove-stock/:id", async (req, res) => {
 	const result = await products.findOneAndDelete({
 		_id: new ObjectId(productId),
 	});
-	if(!result) {
-		return res.status(400).json({message: 'Product not found!'})
+	if (!result) {
+		return res.status(400).json({ message: "Product not found!" });
 	}
-	return res.json({message: 'Product deleted successfully!'});
+	return res.json({ message: "Product deleted successfully!" });
+});
+
+app.get("/requested-stocks/:date", async (req, res) => {
+	const inputDateString = req.params?.date;
+	if (!inputDateString) {
+		return res.status(400).json({ message: "Date is required!" });
+	}
+
+	const currentDate = new Date();
+	const inputDate = new Date(inputDateString);
+
+	const startDayDate = new Date(inputDate.toISOString());
+	startDayDate.setHours(0, 0, 0, 0);
+
+	const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
+	const sameMonth = inputDate.getMonth() === currentDate.getMonth();
+	const sameDay = inputDate.getDate() === currentDate.getDate();
+
+	if (!sameYear || !sameMonth || !sameDay) {
+		inputDate.setHours(23, 59, 59, 999);
+	} else {
+		inputDate.setHours(
+			currentDate.getHours(),
+			currentDate.getMinutes(),
+			currentDate.getSeconds(),
+			currentDate.getMilliseconds()
+		);
+	}
+
+	const data = await stock_requests
+		.find({
+			created_date: {
+				$gte: startDayDate,
+				$lte: inputDate,
+			},
+		})
+		.toArray();
+	return res.json(data);
+});
+
+app.post("/request-stock", async (req, res) => {
+	const product_name = req.body?.product_name;
+	const quantity = req.body?.quantity;
+
+	if (
+		!product_name ||
+		typeof product_name !== "string" ||
+		!quantity ||
+		typeof quantity !== "number"
+	) {
+		return res
+			.status(400)
+			.json({ message: "Product Name and Quantity are required!" });
+	}
+
+	// status - 'processing' | 'done'
+	//  admin_status - 'processing' | 'approved'
+	const data = await stock_requests.insertOne({
+		product_name,
+		quantity,
+		status: "processing",
+		admin_status: "processing",
+		created_date: new Date(),
+	});
+	if (!data) {
+		return res.status(500).json({ message: "Something went wrong!" });
+	}
+	return res.json(data);
 });
 
 app.listen(3500, () => {
