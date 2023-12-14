@@ -17,4 +17,11 @@ async function newOrderProcess() {
  // return await newRef.set({ message: "hello world" });
 }
 
-module.exports = { newOrderProcess };
+async function newDeliRouteProcess() {
+  const ref = db.ref("NewDeliRouteEvent");
+  return await ref.set(`${new Date()}`);
+
+  // return await newRef.set({ message: "hello world" });
+}
+
+module.exports = { newOrderProcess, newDeliRouteProcess };

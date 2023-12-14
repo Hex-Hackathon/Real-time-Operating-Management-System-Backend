@@ -53,7 +53,7 @@ const secret_factory = process.env.FACTORY_JWT;
 
 // real-time
 
-const { newOrderProcess } = require("./real_time");
+const { newOrderProcess, newDeliRouteProcess } = require("./real_time");
 
 //--------------- --------------- ----- --------------- ---------------
 //--------------- --------------- SALES --------------- ---------------
@@ -859,6 +859,8 @@ app.post("/create-deli-route", async function (req, res) {
             $set: { deli_id: result.insertedId, delivery_status: "delivering" },
           }
         );
+
+        newDeliRouteProcess();
       }
 
       if (result) return res.status(201).json(result);
@@ -1161,7 +1163,6 @@ app.post("/request-stock", async (req, res) => {
   }
   return res.json(data);
 });
-
 
 //--------------- --------------- ----- --------------- ---------------
 //--------------- --------------- Admin --------------- ---------------
@@ -1740,7 +1741,6 @@ app.get("/order-analysis", async (req, res) => {
 
   res.json(analysis);
 });
-
 
 //--------------- --------------- ------- --------------- ---------------
 //--------------- --------------- Factory --------------- ---------------
