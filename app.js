@@ -1135,8 +1135,8 @@ app.post("/request-stock", async (req, res) => {
   if (
     !product_id ||
     typeof product_id !== "string" ||
-    !quantity ||
-    typeof quantity !== "number"
+    !quantity 
+    // typeof quantity !== "number"
   ) {
     return res
       .status(400)
@@ -1158,7 +1158,7 @@ app.post("/request-stock", async (req, res) => {
   //  admin_status - 'processing' | 'approved'
   const data = await stock_requests.insertOne({
     product_id: foundProduct?._id,
-    quantity,
+    quantity:Number(quantity),
     status: "processing",
     admin_status: "processing",
     created_date: new Date(),
