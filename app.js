@@ -1148,7 +1148,7 @@ app.post("/request-stock", async (req, res) => {
 
   // create new product if doesn't exist
   const foundProduct = await products.findOne({
-    _id: new ObjectId(Number(product_id)),
+    _id: new ObjectId(product_id),
   });
   if (!foundProduct) {
     return res.status(400).json({ message: "No product found!" });
