@@ -1135,7 +1135,7 @@ app.post("/request-stock", async (req, res) => {
   if (
     !product_id ||
     typeof product_id !== "string" ||
-    !quantity 
+    !quantity
     // typeof quantity !== "number"
   ) {
     return res
@@ -1158,12 +1158,12 @@ app.post("/request-stock", async (req, res) => {
   //  admin_status - 'processing' | 'approved'
   const data = await stock_requests.insertOne({
     product_id: foundProduct?._id,
-    quantity:Number(quantity),
+    quantity: Number(quantity),
     status: "processing",
     admin_status: "processing",
     created_date: new Date(),
   });
-  if(data.insertedId){
+  if (data.insertedId) {
     newRawRequestProcess();
     return res.status(201).json(data);
   }
@@ -1853,14 +1853,33 @@ app.get("/order-analysis", async (req, res) => {
     ])
     .toArray();
 
-  const result = analysis.sort((a, b) => {
-    return b?.item?.localeCompare(a);
-  });
-  console.log(result);
+  const result = !analysis?.length
+    ? []
+    : analysis.sort((a, b) => {
+        return a.order_status.localeCompare(b);
+      });
 
-  res.json(analysis);
+  res.json(result);
 });
 
+app.patch("/approve-stock-request/:id", async (req, res) => {
+  const requestId = req.params?.id;
+  if (!requestId) {
+    return res.status(400).json({ message: "Request ID is required!" });
+  }
+  if (!ObjectId.isValid(requestId)) {
+    return res.status(400).json({ message: "Invalid request ID!" });
+  }
+
+  const result = await stock_requests.findOneAndUpdate(
+    { _id: new ObjectId(requestId) },
+    { $set: { admin_status: "approved" } }
+  );
+  if (!result) {
+    return res.status(400).json({ message: "Request not found!" });
+  }
+  return res.json({ mesage: "Approved!" });
+});
 //--------------- --------------- ------- --------------- ---------------
 //--------------- --------------- Factory --------------- ---------------
 //--------------- --------------- ------- --------------- ---------------
@@ -2065,6 +2084,25 @@ app.patch("/approve-material-requests", async (req, res) => {
   } catch (err) {
     return res.status(400).json({ message: err.message });
   }
+});
+
+app.patch("/provide-stock-request/:id", async (req, res) => {
+  const requestId = req.params?.id;
+  if (!requestId) {
+    return res.status(400).json({ message: "Request ID is required!" });
+  }
+  if (!ObjectId.isValid(requestId)) {
+    return res.status(400).json({ message: "Invalid request ID!" });
+  }
+
+  const result = await stock_requests.findOneAndUpdate(
+    { _id: new ObjectId(requestId) },
+    { $set: { status: "processed" } }
+  );
+  if (!result) {
+    return res.status(400).json({ message: "Request not found!" });
+  }
+  return res.json({ mesage: "Approved!" });
 });
 
 app.get("/all", async function (req, res) {
