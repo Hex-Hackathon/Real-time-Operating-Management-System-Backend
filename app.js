@@ -623,6 +623,69 @@ app.get("/instock-lists", async function (req, res) {
   }
 });
 
+app.get("/requested-stocks-sales/:date", async (req, res) => {
+  const inputDateString = req.params?.date;
+  if (!inputDateString) {
+    return res.status(400).json({ message: "Date is required!" });
+  }
+
+  const currentDate = new Date();
+  const inputDate = new Date(inputDateString);
+
+  const startDayDate = new Date(inputDate.toISOString());
+  startDayDate.setHours(0, 0, 0, 0);
+
+  const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
+  const sameMonth = inputDate.getMonth() === currentDate.getMonth();
+  const sameDay = inputDate.getDate() === currentDate.getDate();
+
+  if (!sameYear || !sameMonth || !sameDay) {
+    inputDate.setHours(23, 59, 59, 999);
+  } else {
+    inputDate.setHours(
+      currentDate.getHours(),
+      currentDate.getMinutes(),
+      currentDate.getSeconds(),
+      currentDate.getMilliseconds()
+    );
+  }
+
+  const data = await stock_requests
+    .aggregate([
+      {
+        $match: {
+          created_date: {
+            $gte: startDayDate,
+            $lte: inputDate,
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "product_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $unwind: {
+          path: "$product",
+          includeArrayIndex: "index",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          index: 0,
+          product_id: 0,
+        },
+      },
+    ])
+    .toArray();
+  return res.json(data);
+});
+
 //--------------- --------------- --------- --------------- ---------------
 //--------------- --------------- Logistics --------------- ---------------
 //--------------- --------------- --------- --------------- ---------------
@@ -994,6 +1057,111 @@ app.get("/product-lists", async function (req, res) {
     return res.status(500).json({ msg: e.message });
   }
 });
+
+app.get("/requested-stocks-warehouse/:date", async (req, res) => {
+  const inputDateString = req.params?.date;
+  if (!inputDateString) {
+    return res.status(400).json({ message: "Date is required!" });
+  }
+
+  const currentDate = new Date();
+  const inputDate = new Date(inputDateString);
+
+  const startDayDate = new Date(inputDate.toISOString());
+  startDayDate.setHours(0, 0, 0, 0);
+
+  const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
+  const sameMonth = inputDate.getMonth() === currentDate.getMonth();
+  const sameDay = inputDate.getDate() === currentDate.getDate();
+
+  if (!sameYear || !sameMonth || !sameDay) {
+    inputDate.setHours(23, 59, 59, 999);
+  } else {
+    inputDate.setHours(
+      currentDate.getHours(),
+      currentDate.getMinutes(),
+      currentDate.getSeconds(),
+      currentDate.getMilliseconds()
+    );
+  }
+
+  const data = await stock_requests
+    .aggregate([
+      {
+        $match: {
+          created_date: {
+            $gte: startDayDate,
+            $lte: inputDate,
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "product_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $unwind: {
+          path: "$product",
+          includeArrayIndex: "index",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          index: 0,
+          product_id: 0,
+        },
+      },
+    ])
+    .toArray();
+  return res.json(data);
+});
+
+app.post("/request-stock", async (req, res) => {
+  const product_id = req.body?.product_id;
+  const quantity = req.body?.quantity;
+
+  if (
+    !product_id ||
+    typeof product_id !== "string" ||
+    !quantity ||
+    typeof quantity !== "number"
+  ) {
+    return res
+      .status(400)
+      .json({ message: "Product ID and Quantity are required!" });
+  }
+  if (!ObjectId.isValid(product_id)) {
+    return res.status(400).json({ message: "Invalid product ID!" });
+  }
+
+  // create new product if doesn't exist
+  const foundProduct = await products.findOne({
+    _id: new ObjectId(product_id),
+  });
+  if (!foundProduct) {
+    return res.status(400).json({ message: "No product found!" });
+  }
+
+  // status - 'processing' | 'done'
+  //  admin_status - 'processing' | 'approved'
+  const data = await stock_requests.insertOne({
+    product_id: foundProduct?._id,
+    quantity,
+    status: "processing",
+    admin_status: "processing",
+    created_date: new Date(),
+  });
+  if (!data) {
+    return res.status(500).json({ message: "Something went wrong!" });
+  }
+  return res.json(data);
+});
+
 
 //--------------- --------------- ----- --------------- ---------------
 //--------------- --------------- Admin --------------- ---------------
@@ -1368,64 +1536,64 @@ const ANALYSIS_METHOD = {
   order_status: "order_status",
 };
 
-app.get("/order-analysis", async (req, res) => {
-  const analysisTime = req.query?.analysisTime;
-  const analyzedBy = req.query?.analyzedBy;
+// app.get("/order-analysis", async (req, res) => {
+//   const analysisTime = req.query?.analysisTime;
+//   const analyzedBy = req.query?.analyzedBy;
 
-  if (
-    !analysisTime ||
-    typeof analysisTime !== "string" ||
-    !VALID_TIME[analysisTime]
-  ) {
-    return res.status(400).json({ message: "Invalid analysis time!" });
-  }
+//   if (
+//     !analysisTime ||
+//     typeof analysisTime !== "string" ||
+//     !VALID_TIME[analysisTime]
+//   ) {
+//     return res.status(400).json({ message: "Invalid analysis time!" });
+//   }
 
-  if (
-    !analyzedBy ||
-    typeof analyzedBy !== "string" ||
-    !ANALYSIS_METHOD[analyzedBy]
-  ) {
-    return res.status(400).json({ message: "Invalid analysis method!" });
-  }
+//   if (
+//     !analyzedBy ||
+//     typeof analyzedBy !== "string" ||
+//     !ANALYSIS_METHOD[analyzedBy]
+//   ) {
+//     return res.status(400).json({ message: "Invalid analysis method!" });
+//   }
 
-  const analysisMethod = ANALYSIS_METHOD[analyzedBy];
-  const currentDate = new Date();
-  const dateStartMethod = DATE_START_METHOD[analysisTime];
+//   const analysisMethod = ANALYSIS_METHOD[analyzedBy];
+//   const currentDate = new Date();
+//   const dateStartMethod = DATE_START_METHOD[analysisTime];
 
-  const analysisDateQuery = {
-    $gte: dateStartMethod(currentDate),
-    $lte: currentDate,
-  };
+//   const analysisDateQuery = {
+//     $gte: dateStartMethod(currentDate),
+//     $lte: currentDate,
+//   };
 
-  const analysis = await orders
-    .aggregate([
-      {
-        $match: {
-          created_date: analysisDateQuery,
-        },
-      },
-      {
-        $group: {
-          _id: "$delivery_status",
-          count: { $sum: 1 },
-          created_date: {
-            $addToSet: "$created_date",
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          [analysisMethod]: "$_id",
-          count: 1,
-          created_date: 1,
-        },
-      },
-    ])
-    .toArray();
+//   const analysis = await orders
+//     .aggregate([
+//       {
+//         $match: {
+//           created_date: analysisDateQuery,
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: "$delivery_status",
+//           count: { $sum: 1 },
+//           created_date: {
+//             $addToSet: "$created_date",
+//           },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           [analysisMethod]: "$_id",
+//           count: 1,
+//           created_date: 1,
+//         },
+//       },
+//     ])
+//     .toArray();
 
-  res.json(analysis);
-});
+//   res.json(analysis);
+// });
 
 app.get("/admin-overall-data", async (req, res) => {
   const date = req.query?.date;
@@ -1481,6 +1649,98 @@ app.get("/admin-overall-data", async (req, res) => {
     { name: "customers", count: totalCustomers },
   ]);
 });
+
+app.get("/order-analysis", async (req, res) => {
+  const period = req.query?.period;
+  if (
+    !period ||
+    (period !== "daily" &&
+      period !== "weekly" &&
+      period !== "monthly" &&
+      period !== "yearly")
+  ) {
+    return res.status(400).json({ message: "Period is required!" });
+  }
+
+  let dateFilter = {};
+  if (period === "yearly") {
+    dateFilter = {
+      $gte: new Date(new Date().getFullYear(), 0, 1, 0, 0, 0, 0),
+      $lt: new Date(new Date().getFullYear() + 1, 0, 1),
+    };
+  } else if (period === "monthly") {
+    dateFilter = {
+      $gte: new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        1,
+        0,
+        0,
+        0,
+        0
+      ),
+      $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+    };
+  } else if (period === "weekly") {
+    const currentDate = new Date();
+    const firstDayOfWeek = new Date(
+      currentDate.setDate(currentDate.getDate() - currentDate.getDay())
+    );
+    firstDayOfWeek.setHours(0, 0, 0, 0);
+
+    const lastDayOfWeek = new Date(
+      firstDayOfWeek.getFullYear(),
+      firstDayOfWeek.getMonth(),
+      firstDayOfWeek.getDate() + 7
+    );
+    console.log({ firstDayOfWeek, lastDayOfWeek });
+
+    dateFilter = {
+      $gte: firstDayOfWeek,
+      $lt: lastDayOfWeek,
+    };
+  } else if (period === "daily") {
+    dateFilter = {
+      $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+      $lt: new Date(new Date().setHours(23, 59, 59, 999)),
+    };
+  }
+
+  const analysis = await orders
+    .aggregate([
+      {
+        $match: {
+          created_date: dateFilter,
+        },
+      },
+      {
+        $group: {
+          _id: "$order_status",
+          count: { $sum: 1 },
+          created_date: {
+            $addToSet: "$created_date",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          order_status: "$_id",
+          count: 1,
+          created_date: 1,
+        },
+      },
+    ])
+    .toArray();
+
+  const result = analysis.sort((a, b) => {
+    return b?.item?.localeCompare(a);
+  });
+  console.log(result);
+
+  res.json(analysis);
+});
+
 
 //--------------- --------------- ------- --------------- ---------------
 //--------------- --------------- Factory --------------- ---------------
