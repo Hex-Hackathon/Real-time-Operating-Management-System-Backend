@@ -58,6 +58,7 @@ const {
   newOrderProcess,
   newDeliRouteProcess,
   newRawRequestProcess,
+  newMaterialRequestProcess,
 } = require("./real_time");
 
 //--------------- --------------- ----- --------------- ---------------
@@ -2047,7 +2048,11 @@ app.post("/requested-materials", async (req, res) => {
     status: "pending",
     created_date: new Date(),
   });
-  return res.json(newRequest);
+  if(newRequest.insertedId){
+     newMaterialRequestProcess();
+     return res.json(newRequest);
+  }
+ 
 });
 
 app.get("/requested-materials/:date", async (req, res) => {

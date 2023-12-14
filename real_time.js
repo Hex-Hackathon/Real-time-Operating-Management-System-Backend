@@ -31,5 +31,18 @@ async function newRawRequestProcess() {
   // return await newRef.set({ message: "hello world" });
 }
 
+async function newMaterialRequestProcess() {
+  const ref = db.ref("NewMaterialRequestEvent");
+  return await ref.set(`${new Date()}`);
 
-module.exports = { newOrderProcess, newDeliRouteProcess, newRawRequestProcess };
+  // return await newRef.set({ message: "hello world" });
+}
+
+
+
+module.exports = {
+  newOrderProcess,
+  newDeliRouteProcess,
+  newRawRequestProcess,
+  newMaterialRequestProcess,
+};
