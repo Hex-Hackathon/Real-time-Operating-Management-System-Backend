@@ -118,16 +118,15 @@ app.post("/sales-login", async function (req, res) {
 });
 
 app.post("/orders", async function (req, res) {
-  const { customer_name, customer_phone, expected_date } = req.body;
+  const { customer_id, expected_date } = req.body;
 
-  if (!customer_name || !customer_phone || !expected_date) {
+  if (!customer_id || !expected_date) {
     res.status(400).json({ msg: "required: something !!!" });
   }
 
   try {
     const ifcustomer = await customers.findOne({
-      phone: customer_phone.toString(),
-      name: customer_name.toString(),
+      _id: new ObjectId(customer_id),
     });
     console.log(ifcustomer);
     if (ifcustomer) {
@@ -1549,8 +1548,6 @@ app.post("/factory-login", async function (req, res) {
     return res.status(500).json({ msg: e.message });
   }
 });
-
-
 
 app.post("/requested-materials", async (req, res) => {
   const material_name = req.body?.material_name;
