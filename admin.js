@@ -176,7 +176,7 @@ app.get("/order-analysis", async (req, res) => {
 	const result = !analysis?.length
 		? []
 		: analysis.sort((a, b) => {
-				return a.order_status.localeCompare(b);
+				return a.order_status.localeCompare(b.order_status);
 		  });
 
 	res.json(result);

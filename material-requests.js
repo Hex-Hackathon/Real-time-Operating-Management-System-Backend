@@ -353,9 +353,12 @@ app.patch("/approve-stock-request", async (req, res) => {
 				_id: {
 					$in: requestObjectIds,
 				},
+				admin_status: {
+					$ne: "approved",
+				},
 			})
 			.toArray();
-		if (!foundRequests) {
+		if (!foundRequests?.length) {
 			return res.status(400).json({ message: "No requests found!" });
 		}
 
@@ -383,12 +386,14 @@ app.patch("/provide-stock-request/:id", async (req, res) => {
 	if (!requestId) {
 		return res.status(400).json({ message: "Request ID is required!" });
 	}
-	if (!ObjectId.isValid(requestId)) {
-		return res.status(400).json({ message: "Invalid request ID!" });
-	}
 
 	const result = await stock_requests.findOneAndUpdate(
-		{ _id: new ObjectId(requestId) },
+		{
+			_id: new ObjectId(requestId),
+			status: {
+				$ne: "processed",
+			},
+		},
 		{ $set: { status: "processed" } }
 	);
 	if (!result) {
