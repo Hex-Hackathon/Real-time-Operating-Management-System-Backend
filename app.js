@@ -1894,17 +1894,17 @@ app.patch("/approve-stock-request", async (req, res) => {
       return res.status(400).json({ message: "Request id list is required!" });
     }
 
-    const requestObjectIds = request_ids.map((idString) => {
-      if (!ObjectId.isValid(idString)) {
-        throw new Error("Invalid request ID!");
-      }
-      return new ObjectId(idString);
-    });
+    // const requestObjectIds = request_ids.map((idString) => {
+    //   if (!ObjectId.isValid(idString)) {
+    //     throw new Error("Invalid request ID!");
+    //   }
+    //   return new ObjectId(idString);
+    // });
 
     const foundRequests = await stock_requests
       .find({
         _id: {
-          $in: requestObjectIds,
+          $in: request_ids,
         },
       })
       .toArray();
@@ -1936,9 +1936,9 @@ app.patch("/provide-stock-request/:id", async (req, res) => {
   if (!requestId) {
     return res.status(400).json({ message: "Request ID is required!" });
   }
-  if (!ObjectId.isValid(requestId)) {
-    return res.status(400).json({ message: "Invalid request ID!" });
-  }
+  // if (!ObjectId.isValid(requestId)) {
+  //   return res.status(400).json({ message: "Invalid request ID!" });
+  // }
 
   const result = await stock_requests.findOneAndUpdate(
     { _id: new ObjectId(requestId) },
@@ -2119,17 +2119,17 @@ app.patch("/approve-material-requests", async (req, res) => {
       return res.status(400).json({ message: "Request id list is required!" });
     }
 
-    const requestObjectIds = request_ids.map((idString) => {
-      if (!ObjectId.isValid(idString)) {
-        throw new Error("Invalid request ID!");
-      }
-      return new ObjectId(idString);
-    });
+    // const requestObjectIds = request_ids.map((idString) => {
+    //   if (!ObjectId.isValid(idString)) {
+    //     throw new Error("Invalid request ID!");
+    //   }
+    //   return new ObjectId(idString);
+    // });
 
     const foundRequests = await material_requests
       .find({
         _id: {
-          $in: requestObjectIds,
+          $in: request_ids,
         },
       })
       .toArray();
@@ -2161,9 +2161,9 @@ app.patch("/provide-stock-request/:id", async (req, res) => {
   if (!requestId) {
     return res.status(400).json({ message: "Request ID is required!" });
   }
-  if (!ObjectId.isValid(requestId)) {
-    return res.status(400).json({ message: "Invalid request ID!" });
-  }
+  // if (!ObjectId.isValid(requestId)) {
+  //   return res.status(400).json({ message: "Invalid request ID!" });
+  // }
 
   const result = await stock_requests.findOneAndUpdate(
     { _id: new ObjectId(requestId) },
