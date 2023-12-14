@@ -1853,16 +1853,85 @@ app.get("/order-analysis", async (req, res) => {
     ])
     .toArray();
 
-  const result = !analysis?.length
-    ? []
-    : analysis.sort((a, b) => {
-        return a.order_status.localeCompare(b);
-      });
+    const result = !analysis?.length
+      ? []
+      : analysis.sort((a, b) => {
+          return a.order_status.localeCompare(b.order_status);
+        });
+
+  // const result = !analysis?.length
+  //   ? []
+  //   : analysis.sort((a, b) => {
+  //       return a.order_status.localeCompare(b);
+  //     });
 
   res.json(result);
 });
 
-app.patch("/approve-stock-request/:id", async (req, res) => {
+// app.patch("/approve-stock-request/:id", async (req, res) => {
+//   const requestId = req.params?.id;
+//   if (!requestId) {
+//     return res.status(400).json({ message: "Request ID is required!" });
+//   }
+//   if (!ObjectId.isValid(requestId)) {
+//     return res.status(400).json({ message: "Invalid request ID!" });
+//   }
+
+//   const result = await stock_requests.findOneAndUpdate(
+//     { _id: new ObjectId(requestId) },
+//     { $set: { admin_status: "approved" } }
+//   );
+//   if (!result) {
+//     return res.status(400).json({ message: "Request not found!" });
+//   }
+//   return res.json({ mesage: "Approved!" });
+// });
+app.patch("/approve-stock-request", async (req, res) => {
+  try {
+    const request_ids = req.body.request_ids;
+
+    if (!request_ids || !request_ids.length) {
+      return res.status(400).json({ message: "Request id list is required!" });
+    }
+
+    const requestObjectIds = request_ids.map((idString) => {
+      if (!ObjectId.isValid(idString)) {
+        throw new Error("Invalid request ID!");
+      }
+      return new ObjectId(idString);
+    });
+
+    const foundRequests = await stock_requests
+      .find({
+        _id: {
+          $in: requestObjectIds,
+        },
+      })
+      .toArray();
+    if (!foundRequests) {
+      return res.status(400).json({ message: "No requests found!" });
+    }
+
+    const result = await stock_requests.updateMany(
+      {
+        _id: {
+          $in: foundRequests.map((request) => request._id),
+        },
+      },
+      {
+        $set: {
+          admin_status: "approved",
+        },
+      }
+    );
+    console.log({ result });
+    return res.json({ message: "Approved!" });
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
+});
+
+app.patch("/provide-stock-request/:id", async (req, res) => {
   const requestId = req.params?.id;
   if (!requestId) {
     return res.status(400).json({ message: "Request ID is required!" });
@@ -1873,13 +1942,14 @@ app.patch("/approve-stock-request/:id", async (req, res) => {
 
   const result = await stock_requests.findOneAndUpdate(
     { _id: new ObjectId(requestId) },
-    { $set: { admin_status: "approved" } }
+    { $set: { status: "processed" } }
   );
   if (!result) {
     return res.status(400).json({ message: "Request not found!" });
   }
   return res.json({ mesage: "Approved!" });
 });
+
 //--------------- --------------- ------- --------------- ---------------
 //--------------- --------------- Factory --------------- ---------------
 //--------------- --------------- ------- --------------- ---------------
