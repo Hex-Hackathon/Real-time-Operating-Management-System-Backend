@@ -126,8 +126,8 @@ app.post("/orders", async function (req, res) {
 
   try {
     const ifcustomer = await customers.findOne({
-      phone: customer_phone,
-      name: customer_name,
+      phone: customer_phone.toString(),
+      name: customer_name.toString(),
     });
     console.log(ifcustomer);
     if (ifcustomer) {
