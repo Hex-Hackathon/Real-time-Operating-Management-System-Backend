@@ -24,4 +24,12 @@ async function newDeliRouteProcess() {
   // return await newRef.set({ message: "hello world" });
 }
 
-module.exports = { newOrderProcess, newDeliRouteProcess };
+async function newRawRequestProcess() {
+  const ref = db.ref("NewRawRequestEvent");
+  return await ref.set(`${new Date()}`);
+
+  // return await newRef.set({ message: "hello world" });
+}
+
+
+module.exports = { newOrderProcess, newDeliRouteProcess, newRawRequestProcess };

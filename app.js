@@ -54,7 +54,11 @@ const secret_factory = process.env.FACTORY_JWT;
 
 // real-time
 
-const { newOrderProcess, newDeliRouteProcess } = require("./real_time");
+const {
+  newOrderProcess,
+  newDeliRouteProcess,
+  newRawRequestProcess,
+} = require("./real_time");
 
 //--------------- --------------- ----- --------------- ---------------
 //--------------- --------------- SALES --------------- ---------------
@@ -1159,6 +1163,10 @@ app.post("/request-stock", async (req, res) => {
     admin_status: "processing",
     created_date: new Date(),
   });
+  if(data){
+    newRawRequestProcess();
+    return res.status(201).json({ message: "Request is created!" });
+  }
   if (!data) {
     return res.status(500).json({ message: "Something went wrong!" });
   }
