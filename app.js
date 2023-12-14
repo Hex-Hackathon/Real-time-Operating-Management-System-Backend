@@ -1163,14 +1163,14 @@ app.post("/request-stock", async (req, res) => {
     admin_status: "processing",
     created_date: new Date(),
   });
-  if(data){
+  if(data.insertedId){
     newRawRequestProcess();
-    return res.status(201).json({ message: "Request is created!" });
+    return res.status(201).json(data);
   }
   if (!data) {
     return res.status(500).json({ message: "Something went wrong!" });
   }
-  return res.json(data);
+  //return res.json(data);
 });
 
 app.post("/add-stock", async (req, res) => {
