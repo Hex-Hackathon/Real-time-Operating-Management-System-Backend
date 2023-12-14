@@ -255,35 +255,71 @@ app.get("/requested-stocks/:date", async (req, res) => {
 	}
 
 	const data = await stock_requests
-		.find({
-			created_date: {
-				$gte: startDayDate,
-				$lte: inputDate,
+		.aggregate([
+			{
+				$match: {
+					created_date: {
+						$gte: startDayDate,
+						$lte: inputDate,
+					},
+				},
 			},
-		})
+			{
+				$lookup: {
+					from: "products",
+					localField: "product_id",
+					foreignField: "_id",
+					as: "product",
+				},
+			},
+			{
+				$unwind: {
+					path: "$product",
+					includeArrayIndex: "index",
+					preserveNullAndEmptyArrays: true,
+				},
+			},
+			{
+				$project: {
+					index: 0,
+					product_id: 0,
+				},
+			},
+		])
 		.toArray();
 	return res.json(data);
 });
 
 app.post("/request-stock", async (req, res) => {
-	const product_name = req.body?.product_name;
+	const product_id = req.body?.product_id;
 	const quantity = req.body?.quantity;
 
 	if (
-		!product_name ||
-		typeof product_name !== "string" ||
+		!product_id ||
+		typeof product_id !== "string" ||
 		!quantity ||
 		typeof quantity !== "number"
 	) {
 		return res
 			.status(400)
-			.json({ message: "Product Name and Quantity are required!" });
+			.json({ message: "Product ID and Quantity are required!" });
+	}
+	if (!ObjectId.isValid(product_id)) {
+		return res.status(400).json({ message: "Invalid product ID!" });
+	}
+
+	// create new product if doesn't exist
+	const foundProduct = await products.findOne({
+		_id: new ObjectId(product_id),
+	});
+	if (!foundProduct) {
+		return res.status(400).json({ message: "No product found!" });
 	}
 
 	// status - 'processing' | 'done'
 	//  admin_status - 'processing' | 'approved'
 	const data = await stock_requests.insertOne({
-		product_name,
+		product_id: foundProduct?._id,
 		quantity,
 		status: "processing",
 		admin_status: "processing",
