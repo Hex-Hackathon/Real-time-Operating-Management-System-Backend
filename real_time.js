@@ -38,6 +38,13 @@ async function newMaterialRequestProcess() {
   // return await newRef.set({ message: "hello world" });
 }
 
+async function approveStockRequestProcess() {
+  const ref = db.ref("ApproveStockRequestEvent");
+  return await ref.set(`${new Date()}`);
+
+  // return await newRef.set({ message: "hello world" });
+}
+
 
 
 module.exports = {
@@ -45,4 +52,5 @@ module.exports = {
   newDeliRouteProcess,
   newRawRequestProcess,
   newMaterialRequestProcess,
+  approveStockRequestProcess,
 };

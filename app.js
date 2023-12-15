@@ -59,6 +59,7 @@ const {
   newDeliRouteProcess,
   newRawRequestProcess,
   newMaterialRequestProcess,
+  approveStockRequestProcess,
 } = require("./real_time");
 
 //--------------- --------------- ----- --------------- ---------------
@@ -90,7 +91,7 @@ const sales_auth = function (req, res, next) {
   }
 };
 
-app.post("/sales-login", async function (req, res) {
+app.post("/sales-login",sales_auth, async function (req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -123,7 +124,7 @@ app.post("/sales-login", async function (req, res) {
   }
 });
 
-app.post("/orders", async function (req, res) {
+app.post("/orders", sales_auth, async function (req, res) {
   const { customer_id, expected_date } = req.body;
 
   if (!customer_id || !expected_date) {
@@ -159,7 +160,7 @@ app.post("/orders", async function (req, res) {
 });
 
 //Important route
-app.post("/add_products_to_order", async function (req, res) {
+app.post("/add_products_to_order", sales_auth, async function (req, res) {
   const { order_id, product_id, product_count } = req.body;
 
   if (!order_id || !product_id || !product_count) {
@@ -208,7 +209,7 @@ app.post("/add_products_to_order", async function (req, res) {
   }
 });
 
-app.post("/order_process_confirm", async function (req, res) {
+app.post("/order_process_confirm", sales_auth, async function (req, res) {
   const { order_id } = req.body;
 
   if (!order_id) {
@@ -234,7 +235,7 @@ app.post("/order_process_confirm", async function (req, res) {
   }
 });
 
-app.get("/pending_orders_list", async function (req, res) {
+app.get("/pending_orders_list", sales_auth, async function (req, res) {
   try {
     const result = await orders
       .aggregate([
@@ -277,7 +278,7 @@ app.get("/pending_orders_list", async function (req, res) {
   }
 });
 
-app.get("/processing_orders_list", async function (req, res) {
+app.get("/processing_orders_list", sales_auth, async function (req, res) {
   try {
     const result = await orders
       .aggregate([
@@ -320,117 +321,127 @@ app.get("/processing_orders_list", async function (req, res) {
   }
 });
 
-app.get("/orders_list_by_place_order_day/:date", async function (req, res) {
-  const { date } = req.params;
+app.get(
+  "/orders_list_by_place_order_day/:date",
+  sales_auth,
+  async function (req, res) {
+    const { date } = req.params;
 
-  if (!date) {
-    res.status(400).json({ msg: "required: something !!!" });
+    if (!date) {
+      res.status(400).json({ msg: "required: something !!!" });
+    }
+
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    try {
+      const result = await orders
+        .aggregate([
+          {
+            $match: {
+              created_date: { $gte: startOfDay, $lt: endOfDay },
+            },
+          },
+          {
+            $lookup: {
+              from: "customers",
+              localField: "customer_id",
+              foreignField: "_id",
+              as: "customer",
+            },
+          },
+          {
+            $unwind: "$customer",
+          },
+          {
+            $addFields: {
+              customer_name: "$customer.name",
+              delivery: "$customer.delivery_address",
+            },
+          },
+          {
+            $project: {
+              customer: 0,
+            },
+          },
+        ])
+        .toArray();
+
+      if (result == [])
+        return res.status(201).json({ msg: "No Data That Day" });
+      if (result) return res.status(201).json(result);
+    } catch (error) {
+      return res.status(500).json({ msg: error.message });
+    }
   }
+);
 
-  const startOfDay = new Date(date);
-  startOfDay.setUTCHours(0, 0, 0, 0);
+app.get(
+  "/orders_list_by_deli_day/:date",
+  sales_auth,
+  async function (req, res) {
+    const { date } = req.params;
 
-  const endOfDay = new Date(date);
-  endOfDay.setUTCHours(23, 59, 59, 999);
+    if (!date) {
+      res.status(400).json({ msg: "required: something !!!" });
+    }
 
-  try {
-    const result = await orders
-      .aggregate([
-        {
-          $match: {
-            created_date: { $gte: startOfDay, $lt: endOfDay },
-          },
-        },
-        {
-          $lookup: {
-            from: "customers",
-            localField: "customer_id",
-            foreignField: "_id",
-            as: "customer",
-          },
-        },
-        {
-          $unwind: "$customer",
-        },
-        {
-          $addFields: {
-            customer_name: "$customer.name",
-            delivery: "$customer.delivery_address",
-          },
-        },
-        {
-          $project: {
-            customer: 0,
-          },
-        },
-      ])
-      .toArray();
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
 
-    if (result == []) return res.status(201).json({ msg: "No Data That Day" });
-    if (result) return res.status(201).json(result);
-  } catch (error) {
-    return res.status(500).json({ msg: error.message });
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    try {
+      const result = await orders
+        .aggregate([
+          {
+            $match: {
+              expected_date: { $gte: startOfDay, $lt: endOfDay },
+            },
+          },
+          {
+            $lookup: {
+              from: "customers",
+              localField: "customer_id",
+              foreignField: "_id",
+              as: "customer",
+            },
+          },
+          {
+            $unwind: "$customer",
+          },
+          {
+            $addFields: {
+              customer_name: "$customer.name",
+              delivery: "$customer.delivery_address",
+            },
+          },
+          {
+            $project: {
+              customer: 0,
+            },
+          },
+        ])
+        .toArray();
+
+      if (result == [])
+        return res.status(201).json({ msg: "No Data That Day" });
+      if (result) return res.status(201).json(result);
+    } catch (error) {
+      return res.status(500).json({ msg: error.message });
+    }
   }
-});
-
-app.get("/orders_list_by_deli_day/:date", async function (req, res) {
-  const { date } = req.params;
-
-  if (!date) {
-    res.status(400).json({ msg: "required: something !!!" });
-  }
-
-  const startOfDay = new Date(date);
-  startOfDay.setUTCHours(0, 0, 0, 0);
-
-  const endOfDay = new Date(date);
-  endOfDay.setUTCHours(23, 59, 59, 999);
-
-  try {
-    const result = await orders
-      .aggregate([
-        {
-          $match: {
-            expected_date: { $gte: startOfDay, $lt: endOfDay },
-          },
-        },
-        {
-          $lookup: {
-            from: "customers",
-            localField: "customer_id",
-            foreignField: "_id",
-            as: "customer",
-          },
-        },
-        {
-          $unwind: "$customer",
-        },
-        {
-          $addFields: {
-            customer_name: "$customer.name",
-            delivery: "$customer.delivery_address",
-          },
-        },
-        {
-          $project: {
-            customer: 0,
-          },
-        },
-      ])
-      .toArray();
-
-    if (result == []) return res.status(201).json({ msg: "No Data That Day" });
-    if (result) return res.status(201).json(result);
-  } catch (error) {
-    return res.status(500).json({ msg: error.message });
-  }
-});
+);
 
 // app.get("/orders_list_between_days", async function (req, res) {});
 
 // app.get("/orders_list_by_month", async function (req, res) {});
 
-app.get("/order_details/:order_id", async function (req, res) {
+app.get("/order_details/:order_id", sales_auth, async function (req, res) {
   const { order_id } = req.params;
 
   if (!order_id) {
@@ -493,7 +504,7 @@ app.get("/order_details/:order_id", async function (req, res) {
   }
 });
 
-app.post("/create_customer", async function (req, res) {
+app.post("/create_customer", sales_auth, async function (req, res) {
   const { name, phone, deli_address, role } = req.body;
 
   if (!name || !phone || !deli_address || !role) {
@@ -519,7 +530,7 @@ app.post("/create_customer", async function (req, res) {
   }
 });
 
-app.get("/search_a_customer", async function (req, res) {
+app.get("/search_a_customer", sales_auth, async function (req, res) {
   const { name, phone, deli_address, role } = req.query;
 
   if (!name && !phone && !deli_address && !role) {
@@ -548,7 +559,7 @@ app.get("/search_a_customer", async function (req, res) {
   }
 });
 
-app.get("/customer_lists", async function (req, res) {
+app.get("/customer_lists", sales_auth, async function (req, res) {
   try {
     const result = await customers
       .find({})
@@ -561,7 +572,7 @@ app.get("/customer_lists", async function (req, res) {
   }
 });
 
-app.get("/search-customer", async function (req, res) {
+app.get("/search-customer", sales_auth, async function (req, res) {
   const { query } = req.query;
   try {
     const result = await customers
@@ -580,7 +591,7 @@ app.get("/search-customer", async function (req, res) {
   }
 });
 
-app.get("/customer_lists_conditionals", async function (req, res) {
+app.get("/customer_lists_conditionals", sales_auth, async function (req, res) {
   const { name, phone, deli_address, role } = req.query;
 
   if (!name && !phone && !deli_address && !role) {
@@ -613,7 +624,7 @@ app.get("/customer_lists_conditionals", async function (req, res) {
   }
 });
 
-app.get("/instock-lists", async function (req, res) {
+app.get("/instock-lists", sales_auth, async function (req, res) {
   try {
     const result = await products
       .find({})
@@ -629,7 +640,7 @@ app.get("/instock-lists", async function (req, res) {
   }
 });
 
-app.get("/requested-stocks-sales/:date", async (req, res) => {
+app.get("/requested-stocks-sales/:date", sales_auth, async (req, res) => {
   const inputDateString = req.params?.date;
   if (!inputDateString) {
     return res.status(400).json({ message: "Date is required!" });
@@ -712,7 +723,7 @@ const logistics_auth = function (req, res, next) {
   }
 };
 
-app.post("/logistics-login", async function (req, res) {
+app.post("/logistics-login",logistics_auth, async function (req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -745,7 +756,7 @@ app.post("/logistics-login", async function (req, res) {
   }
 });
 
-app.post("/create-truck", async function (req, res) {
+app.post("/create-truck", logistics_auth, async function (req, res) {
   const { truck_id_card, truck_capacity, driver } = req.body;
 
   if (!truck_id_card || !truck_capacity || !driver) {
@@ -772,7 +783,7 @@ app.post("/create-truck", async function (req, res) {
   }
 });
 
-app.get("/truck-lists", async function (req, res) {
+app.get("/truck-lists", logistics_auth, async function (req, res) {
   try {
     const result = await truck
       .find({})
@@ -785,7 +796,7 @@ app.get("/truck-lists", async function (req, res) {
   }
 });
 
-app.get("/incoming_pending_orders", async function (req, res) {
+app.get("/incoming_pending_orders", logistics_auth, async function (req, res) {
   try {
     const result = await orders
       .aggregate([
@@ -827,7 +838,7 @@ app.get("/incoming_pending_orders", async function (req, res) {
   }
 });
 
-app.post("/create-deli-route", async function (req, res) {
+app.post("/create-deli-route", logistics_auth, async function (req, res) {
   const { truck_id_card, deperature_date, completed_date, IdsOfOrders } =
     req.body;
 
@@ -878,10 +889,10 @@ app.post("/create-deli-route", async function (req, res) {
   }
 });
 
-app.get("/deli-routes", async function (req, res) {
+app.get("/deli-routes", logistics_auth, async function (req, res) {
   try {
     const result = await deli_route
-      .find({ })
+      .find({})
       .sort({
         deperature_date: -1,
       })
@@ -893,43 +904,47 @@ app.get("/deli-routes", async function (req, res) {
   }
 });
 
-app.get("/deli-route-details/:route_id", async function (req, res) {
-  const { route_id } = req.params;
+app.get(
+  "/deli-route-details/:route_id",
+  logistics_auth,
+  async function (req, res) {
+    const { route_id } = req.params;
 
-  if (!route_id) {
-    return res.status(400).json({ msg: "required: something !!!" });
-  }
-
-  try {
-    const mainDocument = await deli_route.findOne({
-      _id: new ObjectId(route_id),
-    });
-
-    if (!mainDocument) {
-      console.log("Main document not found.");
-      return;
+    if (!route_id) {
+      return res.status(400).json({ msg: "required: something !!!" });
     }
 
-    // Extract order IDs from the main document
-    const orderIdsArray = mainDocument.IdsOfOrders.map(
-      (id) => new ObjectId(id)
-    );
+    try {
+      const mainDocument = await deli_route.findOne({
+        _id: new ObjectId(route_id),
+      });
 
-    // Find orders using the order IDs
-    const orderRe = await orders
-      .find({ _id: { $in: orderIdsArray } })
-      .toArray();
+      if (!mainDocument) {
+        console.log("Main document not found.");
+        return;
+      }
 
-    console.log("Main document:", mainDocument);
-    console.log("Orders:", orderRe);
+      // Extract order IDs from the main document
+      const orderIdsArray = mainDocument.IdsOfOrders.map(
+        (id) => new ObjectId(id)
+      );
 
-    if ((mainDocument, orderRe))
-      return res.status(201).json([mainDocument, orderRe]);
-    if (!mainDocument || !orderRe) throw new Error("Truck Create Fail");
-  } catch (e) {
-    return res.status(400).json({ msg: e.message });
+      // Find orders using the order IDs
+      const orderRe = await orders
+        .find({ _id: { $in: orderIdsArray } })
+        .toArray();
+
+      console.log("Main document:", mainDocument);
+      console.log("Orders:", orderRe);
+
+      if ((mainDocument, orderRe))
+        return res.status(201).json([mainDocument, orderRe]);
+      if (!mainDocument || !orderRe) throw new Error("Truck Create Fail");
+    } catch (e) {
+      return res.status(400).json({ msg: e.message });
+    }
   }
-});
+);
 
 //--------------- --------------- --------- --------------- ---------------
 //--------------- --------------- Warehouse --------------- ---------------
@@ -951,7 +966,7 @@ const warehouse_auth = function (req, res, next) {
   }
 };
 
-app.post("/warehouse-login", async function (req, res) {
+app.post("/warehouse-login",warehouse_auth, async function (req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -984,7 +999,7 @@ app.post("/warehouse-login", async function (req, res) {
   }
 });
 
-app.post("/product-increase", async function (req, res) {
+app.post("/product-increase", warehouse_auth, async function (req, res) {
   const { product_id, increase } = req.body;
 
   if (!product_id || !increase) {
@@ -1016,7 +1031,7 @@ app.post("/product-increase", async function (req, res) {
   }
 });
 
-app.post("/product-decrease", async function (req, res) {
+app.post("/product-decrease", warehouse_auth, async function (req, res) {
   const { product_id, decrease } = req.body;
 
   if (!product_id || !decrease) {
@@ -1050,7 +1065,7 @@ app.post("/product-decrease", async function (req, res) {
   }
 });
 
-app.get("/product-lists", async function (req, res) {
+app.get("/product-lists", warehouse_auth, async function (req, res) {
   try {
     const result = await products
       .find({})
@@ -1066,70 +1081,74 @@ app.get("/product-lists", async function (req, res) {
   }
 });
 
-app.get("/requested-stocks-warehouse/:date", async (req, res) => {
-  const inputDateString = req.params?.date;
-  if (!inputDateString) {
-    return res.status(400).json({ message: "Date is required!" });
-  }
+app.get(
+  "/requested-stocks-warehouse/:date",
+  warehouse_auth,
+  async (req, res) => {
+    const inputDateString = req.params?.date;
+    if (!inputDateString) {
+      return res.status(400).json({ message: "Date is required!" });
+    }
 
-  const currentDate = new Date();
-  const inputDate = new Date(inputDateString);
+    const currentDate = new Date();
+    const inputDate = new Date(inputDateString);
 
-  const startDayDate = new Date(inputDate.toISOString());
-  startDayDate.setHours(0, 0, 0, 0);
+    const startDayDate = new Date(inputDate.toISOString());
+    startDayDate.setHours(0, 0, 0, 0);
 
-  const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
-  const sameMonth = inputDate.getMonth() === currentDate.getMonth();
-  const sameDay = inputDate.getDate() === currentDate.getDate();
+    const sameYear = inputDate.getFullYear() === currentDate.getFullYear();
+    const sameMonth = inputDate.getMonth() === currentDate.getMonth();
+    const sameDay = inputDate.getDate() === currentDate.getDate();
 
-  if (!sameYear || !sameMonth || !sameDay) {
-    inputDate.setHours(23, 59, 59, 999);
-  } else {
-    inputDate.setHours(
-      currentDate.getHours(),
-      currentDate.getMinutes(),
-      currentDate.getSeconds(),
-      currentDate.getMilliseconds()
-    );
-  }
+    if (!sameYear || !sameMonth || !sameDay) {
+      inputDate.setHours(23, 59, 59, 999);
+    } else {
+      inputDate.setHours(
+        currentDate.getHours(),
+        currentDate.getMinutes(),
+        currentDate.getSeconds(),
+        currentDate.getMilliseconds()
+      );
+    }
 
-  const data = await stock_requests
-    .aggregate([
-      {
-        $match: {
-          created_date: {
-            $gte: startDayDate,
-            $lte: inputDate,
+    const data = await stock_requests
+      .aggregate([
+        {
+          $match: {
+            created_date: {
+              $gte: startDayDate,
+              $lte: inputDate,
+            },
           },
         },
-      },
-      {
-        $lookup: {
-          from: "products",
-          localField: "product_id",
-          foreignField: "_id",
-          as: "product",
+        {
+          $lookup: {
+            from: "products",
+            localField: "product_id",
+            foreignField: "_id",
+            as: "product",
+          },
         },
-      },
-      {
-        $unwind: {
-          path: "$product",
-          includeArrayIndex: "index",
-          preserveNullAndEmptyArrays: true,
+        {
+          $unwind: {
+            path: "$product",
+            includeArrayIndex: "index",
+            preserveNullAndEmptyArrays: true,
+          },
         },
-      },
-      {
-        $project: {
-          index: 0,
-          product_id: 0,
+        {
+          $project: {
+            index: 0,
+            product_id: 0,
+          },
         },
-      },
-    ])
-    .toArray();
-  return res.json(data);
-});
+      ])
+      .toArray();
+    return res.json(data);
+  }
+);
 
-app.post("/request-stock", async (req, res) => {
+app.post("/request-stock", warehouse_auth, async (req, res) => {
   const product_id = req.body?.product_id;
   const quantity = req.body?.quantity;
 
@@ -1174,7 +1193,7 @@ app.post("/request-stock", async (req, res) => {
   //return res.json(data);
 });
 
-app.post("/add-stock", async (req, res) => {
+app.post("/add-stock", warehouse_auth, async (req, res) => {
   const product_name = req.body?.product_name;
   const quantity = req.body?.quantity;
 
@@ -1204,7 +1223,7 @@ app.post("/add-stock", async (req, res) => {
   return res.json(result);
 });
 
-app.delete("/remove-stock/:id", async (req, res) => {
+app.delete("/remove-stock/:id", warehouse_auth, async (req, res) => {
   const productId = req.params?.id;
   if (!productId) {
     return res.status(400).json({ message: "Product ID is required!" });
@@ -1222,7 +1241,7 @@ app.delete("/remove-stock/:id", async (req, res) => {
   return res.json({ message: "Product deleted successfully!" });
 });
 
-app.get("/requested-stocks/:date", async (req, res) => {
+app.get("/requested-stocks/:date", warehouse_auth, async (req, res) => {
   const inputDateString = req.params?.date;
   if (!inputDateString) {
     return res.status(400).json({ message: "Date is required!" });
@@ -1304,7 +1323,7 @@ const admin_auth = function (req, res, next) {
   }
 };
 
-app.post("/admin-login", async function (req, res) {
+app.post("/admin-login", admin_auth,async function (req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -1337,7 +1356,7 @@ app.post("/admin-login", async function (req, res) {
   }
 });
 
-app.post("/create-employee", async function (req, res) {
+app.post("/create-employee", admin_auth, async function (req, res) {
   const { name, email, phone, role, department, password } = req.body;
 
   try {
@@ -1368,7 +1387,7 @@ app.post("/create-employee", async function (req, res) {
   }
 });
 
-app.get("/employee-list/:start/:end", async function (req, res) {
+app.get("/employee-list/:start/:end", admin_auth, async function (req, res) {
   const { start, end } = req.params;
 
   try {
@@ -1395,7 +1414,7 @@ app.get("/employee-list/:start/:end", async function (req, res) {
   }
 });
 
-app.post("/create-admin", async function (req, res) {
+app.post("/create-admin", admin_auth, async function (req, res) {
   const { name, email, phone, role, department, password } = req.body;
 
   try {
@@ -1426,7 +1445,7 @@ app.post("/create-admin", async function (req, res) {
   }
 });
 
-app.post("/create-product", async function (req, res) {
+app.post("/create-product", admin_auth, async function (req, res) {
   const { product_name, in_stock_count } = req.body;
 
   if (!product_name || !in_stock_count) {
@@ -1450,7 +1469,7 @@ app.post("/create-product", async function (req, res) {
   }
 });
 
-app.post("/create-raw-materials", async function (req, res) {
+app.post("/create-raw-materials", admin_auth, async function (req, res) {
   const { raw_material_name, in_stock_count } = req.body;
 
   if (!raw_material_name || !in_stock_count) {
@@ -1475,7 +1494,7 @@ app.post("/create-raw-materials", async function (req, res) {
   }
 });
 
-app.post("/create-receipe-of-product", async function (req, res) {
+app.post("/create-receipe-of-product", admin_auth, async function (req, res) {
   const { product_id } = req.body;
 
   if (!product_id) {
@@ -1496,7 +1515,7 @@ app.post("/create-receipe-of-product", async function (req, res) {
   }
 });
 
-app.post("/add-raw-material-to-receipe", async function (req, res) {
+app.post("/add-raw-material-to-receipe", admin_auth, async function (req, res) {
   const { receipe_id, raw_material_id, require_raw } = req.body;
 
   if (!receipe_id) {
@@ -1531,7 +1550,7 @@ app.post("/add-raw-material-to-receipe", async function (req, res) {
   }
 });
 
-app.get("/list-raw-materials", async function (req, res) {
+app.get("/list-raw-materials", admin_auth, async function (req, res) {
   try {
     const result = await raw_materials
       .find({})
@@ -1545,12 +1564,12 @@ app.get("/list-raw-materials", async function (req, res) {
   }
 });
 
-app.get("/raw-materials", async (req, res) => {
+app.get("/raw-materials", admin_auth, async (req, res) => {
   const result = await raw_materials.find().toArray();
   return res.json(result);
 });
 
-app.get("/orders-list-by_month", async function (req, res) {
+app.get("/orders-list-by_month", admin_auth, async function (req, res) {
   const { date } = req.query;
 
   if (!date) {
@@ -1716,7 +1735,7 @@ const ANALYSIS_METHOD = {
 //   res.json(analysis);
 // });
 
-app.get("/admin-overall-data", async (req, res) => {
+app.get("/admin-overall-data", admin_auth, async (req, res) => {
   const date = req.query?.date;
   if (!date) {
     return res.status(400).json({ message: "Date is required!" });
@@ -1771,7 +1790,7 @@ app.get("/admin-overall-data", async (req, res) => {
   ]);
 });
 
-app.get("/order-analysis", async (req, res) => {
+app.get("/order-analysis", admin_auth, async (req, res) => {
   const period = req.query?.period;
   if (
     !period ||
@@ -1854,11 +1873,11 @@ app.get("/order-analysis", async (req, res) => {
     ])
     .toArray();
 
-    const result = !analysis?.length
-      ? []
-      : analysis.sort((a, b) => {
-          return a.order_status.localeCompare(b.order_status);
-        });
+  const result = !analysis?.length
+    ? []
+    : analysis.sort((a, b) => {
+        return a.order_status.localeCompare(b.order_status);
+      });
 
   // const result = !analysis?.length
   //   ? []
@@ -1887,7 +1906,7 @@ app.get("/order-analysis", async (req, res) => {
 //   }
 //   return res.json({ mesage: "Approved!" });
 // });
-app.patch("/approve-stock-request", async (req, res) => {
+app.patch("/approve-stock-request", admin_auth, async (req, res) => {
   try {
     const request_ids = req.body.request_ids;
 
@@ -1903,8 +1922,8 @@ app.patch("/approve-stock-request", async (req, res) => {
     // });
 
     const requestObjectIds = request_ids.map((idString) => {
-			return new ObjectId(idString);
-		});
+      return new ObjectId(idString);
+    });
 
     const foundRequests = await stock_requests
       .find({
@@ -1933,13 +1952,16 @@ app.patch("/approve-stock-request", async (req, res) => {
       }
     );
     console.log({ result });
-    return res.json({ message: "Approved!" });
+    if (result) {
+      approveStockRequestProcess();
+      return res.json({ message: "Approved!" });
+    }
   } catch (err) {
     return res.status(400).json({ message: err.message });
   }
 });
 
-app.patch("/provide-stock-request/:id", async (req, res) => {
+app.patch("/provide-stock-request/:id", admin_auth, async (req, res) => {
   const requestId = req.params?.id;
   if (!requestId) {
     return res.status(400).json({ message: "Request ID is required!" });
@@ -1979,7 +2001,7 @@ const factory_auth = function (req, res, next) {
   }
 };
 
-app.get("/raw-materials-list", async function (req, res) {
+app.get("/raw-materials-list",factory_auth, async function (req, res) {
   try {
     const result = await raw_materials
       .find({})
@@ -1993,7 +2015,7 @@ app.get("/raw-materials-list", async function (req, res) {
   }
 });
 
-app.post("/factory-login", async function (req, res) {
+app.post("/factory-login", factory_auth, async function (req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -2026,7 +2048,7 @@ app.post("/factory-login", async function (req, res) {
   }
 });
 
-app.post("/requested-materials", async (req, res) => {
+app.post("/requested-materials", factory_auth, async (req, res) => {
   const material_name = req.body?.material_name;
   const quantity = req.body?.quantity;
   const budget = req.body?.budget;
@@ -2052,14 +2074,13 @@ app.post("/requested-materials", async (req, res) => {
     status: "pending",
     created_date: new Date(),
   });
-  if(newRequest.insertedId){
-     newMaterialRequestProcess();
-     return res.json(newRequest);
+  if (newRequest.insertedId) {
+    newMaterialRequestProcess();
+    return res.json(newRequest);
   }
- 
 });
 
-app.get("/requested-materials/:date", async (req, res) => {
+app.get("/requested-materials/:date", factory_auth, async (req, res) => {
   const inputDateString = req.params?.date;
   if (!inputDateString) {
     return res.status(400).json({ message: "Date is required!" });
@@ -2124,7 +2145,7 @@ app.get("/requested-materials/:date", async (req, res) => {
   return res.json(data);
 });
 
-app.patch("/approve-material-requests", async (req, res) => {
+app.patch("/approve-material-requests", factory_auth, async (req, res) => {
   try {
     const request_ids = req.body?.request_ids;
 
@@ -2139,8 +2160,8 @@ app.patch("/approve-material-requests", async (req, res) => {
     //   return new ObjectId(idString);
     // });
     const requestObjectIds = request_ids.map((idString) => {
-			return new ObjectId(idString);
-		});
+      return new ObjectId(idString);
+    });
 
     const foundRequests = await material_requests
       .find({
@@ -2172,7 +2193,7 @@ app.patch("/approve-material-requests", async (req, res) => {
   }
 });
 
-app.patch("/provide-stock-request/:id", async (req, res) => {
+app.patch("/provide-stock-request/:id", factory_auth, async (req, res) => {
   const requestId = req.params?.id;
   if (!requestId) {
     return res.status(400).json({ message: "Request ID is required!" });
@@ -2191,7 +2212,7 @@ app.patch("/provide-stock-request/:id", async (req, res) => {
   return res.json({ mesage: "Approved!" });
 });
 
-app.get("/all", async function (req, res) {
+app.get("/all", factory_auth, async function (req, res) {
   const d1 = await customers.find({}).toArray();
   const d2 = await employee.find({}).toArray();
   const d3 = await orders.find({}).toArray();
